@@ -23,7 +23,11 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm test
+      - run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
       - run: npm version ${{ github.event.inputs.version }}
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: git push --follow-tags
