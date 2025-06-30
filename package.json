@@ -1,6 +1,6 @@
 {
   "name": "precise-time-ntp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "🚀 Ultra-simple NTP time synchronization with real-time WebSocket support. Add precise clocks to any webpage in 2 lines of code!",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "basic": "node examples/basic.js",
     "auto-sync": "node examples/auto-sync.js",
     "websocket": "node examples/websocket.js"
-  }, 
+  },
   "keywords": [
     "ntp",
     "time",
