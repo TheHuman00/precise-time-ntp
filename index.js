@@ -128,19 +128,19 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Obtient l'heure NTP d'un serveur
+   * Gets NTP time from a server
    * @private
    */
   getNtpTime(server, timeout = 5000) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`Timeout après ${timeout}ms`));
+        reject(new Error(`Timeout after ${timeout}ms`));
       }, timeout);
       
       ntpClient.getNetworkTime(server, 123, (err, date) => {
         clearTimeout(timer);
         if (err) {
-          reject(new Error(`Erreur NTP: ${err.message}`));
+          reject(new Error(`NTP error: ${err.message}`));
         } else {
           resolve(date);
         }
@@ -149,40 +149,40 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Retourne l'heure actuelle synchronisée
-   * @returns {Date} Heure précise
+   * Returns current synchronized time
+   * @returns {Date} Precise time
    */
   now() {
     if (!this.isSync) {
-      throw new Error('Horloge non synchronisée. Appelez sync() d\'abord.');
+      throw new Error('Clock not synchronized. Call sync() first.');
     }
     
     const elapsed = performance.now() - this.lastSyncTime;
-    // Utiliser l'offset corrigé graduellement si disponible
+    // Use gradually corrected offset if available
     const activeOffset = this.correctionInProgress ? this.currentOffset : this.systemOffset;
     return new Date(this.syncDate.getTime() + elapsed + activeOffset);
   }
 
   /**
-   * Retourne l'heure au format ISO
-   * @returns {string} Timestamp ISO
+   * Returns time in ISO format
+   * @returns {string} ISO timestamp
    */
   timestamp() {
     return this.now().toISOString();
   }
 
   /**
-   * Retourne le décalage par rapport à l'heure système
-   * @returns {number} Décalage en millisecondes
+   * Returns the offset from system time
+   * @returns {number} Offset in milliseconds
    */
   offset() {
     if (!this.isSync) return 0;
-    // Retourner l'offset corrigé graduellement si disponible
+    // Return gradually corrected offset if available
     return this.correctionInProgress ? this.currentOffset : this.systemOffset;
   }
 
   /**
-   * Vérifie si l'horloge est synchronisée
+   * Checks if clock is synchronized
    * @returns {boolean}
    */
   isSynchronized() {
@@ -190,7 +190,7 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Retourne des statistiques de synchronisation
+   * Returns synchronization statistics
    * @returns {Object}
    */
   stats() {
@@ -212,8 +212,8 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Démarre la synchronisation automatique
-   * @param {number} interval - Intervalle en millisecondes
+   * Starts automatic synchronization
+   * @param {number} interval - Interval in milliseconds
    */
   startAutoSync(interval = 300000) {
     if (this.autoSyncTimer) {
@@ -226,36 +226,36 @@ class TimeSync extends EventEmitter {
       });
     }, interval);
     
-    console.log(`🔄 Auto-sync activé (${interval / 1000}s)`);
+    console.log(`🔄 Auto-sync enabled (${interval / 1000}s)`);
   }
 
   /**
-   * Arrête la synchronisation automatique
+   * Stops automatic synchronization
    */
   stopAutoSync() {
     if (this.autoSyncTimer) {
       clearInterval(this.autoSyncTimer);
       this.autoSyncTimer = null;
-      console.log('🛑 Auto-sync désactivé');
+      console.log('🛑 Auto-sync disabled');
     }
   }
   /**
-   * Démarre un serveur WebSocket pour diffuser l'heure en temps réel
-   * @param {number} port - Port du serveur WebSocket
-   * @returns {number} Port utilisé
+   * Starts a WebSocket server to broadcast time in real-time
+   * @param {number} port - WebSocket server port
+   * @returns {number} Port used
    */
   startWebSocketServer(port = 8080) {
     if (this.wsServer) {
-      throw new Error('Serveur WebSocket déjà démarré');
+      throw new Error('WebSocket server already started');
     }
     
     this.wsServer = new WebSocket.Server({ port });
     
     this.wsServer.on('connection', (ws) => {
       this.wsClients.add(ws);
-      console.log(`🔌 Client WebSocket connecté (${this.wsClients.size} total)`);
+      console.log(`🔌 WebSocket client connected (${this.wsClients.size} total)`);
       
-      // Envoyer l'heure immédiatement
+      // Send time immediately
       if (this.isSync) {
         ws.send(JSON.stringify({
           type: 'time',
@@ -269,7 +269,7 @@ class TimeSync extends EventEmitter {
       
       ws.on('close', () => {
         this.wsClients.delete(ws);
-        console.log(`🔌 Client WebSocket déconnecté (${this.wsClients.size} restant)`);
+        console.log(`🔌 WebSocket client disconnected (${this.wsClients.size} remaining)`);
       });
       
       ws.on('message', (message) => {
@@ -279,25 +279,25 @@ class TimeSync extends EventEmitter {
         } catch (error) {
           ws.send(JSON.stringify({
             type: 'error',
-            message: 'Format JSON invalide'
+            message: 'Invalid JSON format'
           }));
         }
       });
     });
     
-    // Diffuser l'heure toutes les secondes
+    // Broadcast time every second
     this.wsTimer = setInterval(() => {
       if (this.isSync && this.wsClients.size > 0) {
         this.broadcastTime();
       }
     }, 1000);
     
-    console.log(`🌐 Serveur WebSocket démarré sur le port ${port}`);
+    console.log(`🌐 WebSocket server started on port ${port}`);
     return port;
   }
 
   /**
-   * Arrête le serveur WebSocket
+   * Stops the WebSocket server
    */
   stopWebSocketServer() {
     if (this.wsTimer) {
@@ -309,12 +309,12 @@ class TimeSync extends EventEmitter {
       this.wsServer.close();
       this.wsClients.clear();
       this.wsServer = null;
-      console.log('🌐 Serveur WebSocket arrêté');
+      console.log('🌐 WebSocket server stopped');
     }
   }
 
   /**
-   * Gère les messages WebSocket
+   * Handles WebSocket messages
    * @private
    */
   handleWebSocketMessage(ws, data) {
@@ -332,7 +332,7 @@ class TimeSync extends EventEmitter {
         } else {
           ws.send(JSON.stringify({
             type: 'error',
-            message: 'Horloge non synchronisée'
+            message: 'Clock not synchronized'
           }));
         }
         break;
@@ -341,7 +341,7 @@ class TimeSync extends EventEmitter {
         this.sync().then(() => {
           ws.send(JSON.stringify({
             type: 'syncComplete',
-            message: 'Synchronisation terminée'
+            message: 'Synchronization complete'
           }));
         }).catch(error => {
           ws.send(JSON.stringify({
@@ -354,13 +354,13 @@ class TimeSync extends EventEmitter {
       default:
         ws.send(JSON.stringify({
           type: 'error',
-          message: 'Commande inconnue. Utilisez: getTime, sync'
+          message: 'Unknown command. Use: getTime, sync'
         }));
     }
   }
 
   /**
-   * Diffuse l'heure à tous les clients WebSocket
+   * Broadcasts time to all WebSocket clients
    * @private
    */
   broadcastTime() {
@@ -381,9 +381,9 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Formate une date/heure
-   * @param {Date|string|number} date - Date à formater
-   * @param {string} format - Format de sortie
+   * Formats a date/time
+   * @param {Date|string|number} date - Date to format
+   * @param {string} format - Output format
    * @returns {string}
    */
   format(date = null, format = 'iso') {
@@ -393,25 +393,25 @@ class TimeSync extends EventEmitter {
       case 'iso':
         return time.toISOString();
       case 'locale':
-        return time.toLocaleString('fr-FR');
+        return time.toLocaleString('en-US');
       case 'timestamp':
         return time.getTime().toString();
       case 'utc':
         return time.toUTCString();
       case 'date':
-        return time.toLocaleDateString('fr-FR');
+        return time.toLocaleDateString('en-US');
       case 'time':
-        return time.toLocaleTimeString('fr-FR');
+        return time.toLocaleTimeString('en-US');
       default:
         return time.toString();
     }
   }
 
   /**
-   * Calcule la différence entre deux dates
+   * Calculates the difference between two dates
    * @param {Date|string|number} date1 
    * @param {Date|string|number} date2 
-   * @returns {number} Différence en millisecondes
+   * @returns {number} Difference in milliseconds
    */
   diff(date1, date2 = null) {
     const d1 = new Date(date1);
@@ -420,7 +420,7 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Affiche un message avec l'heure précise
+   * Displays a message with precise time
    * @param {string} message 
    */
   log(message) {
@@ -429,7 +429,7 @@ class TimeSync extends EventEmitter {
   }
   
   /**
-   * Applique une correction graduelle de l'offset
+   * Applies gradual offset correction
    * @private
    */
   applyGradualCorrection(rate = 0.1) {
@@ -438,7 +438,7 @@ class TimeSync extends EventEmitter {
     const diff = this.targetOffset - this.currentOffset;
     const correction = diff * rate;
     
-    // Si la correction est très petite, appliquer directement
+    // If correction is very small, apply directly
     if (Math.abs(diff) < 1) {
       this.currentOffset = this.targetOffset;
       this.correctionInProgress = false;
@@ -451,16 +451,16 @@ class TimeSync extends EventEmitter {
     
     this.currentOffset += correction;
     
-    // Programmer la prochaine correction
+    // Schedule next correction
     setTimeout(() => {
       this.applyGradualCorrection(rate);
-    }, 100); // Correction toutes les 100ms
+    }, 100); // Correction every 100ms
   }
 
   /**
-   * Active ou désactive la correction graduelle
-   * @param {boolean} enabled - Activer la correction graduelle
-   * @param {Object} options - Options de correction
+   * Enables or disables gradual correction
+   * @param {boolean} enabled - Enable gradual correction
+   * @param {Object} options - Correction options
    */
   setSmoothCorrection(enabled, options = {}) {
     this.config.smoothCorrection = enabled;
@@ -475,16 +475,16 @@ class TimeSync extends EventEmitter {
       this.config.maxOffsetThreshold = options.maxOffsetThreshold;
     }
     
-    console.log(`🔧 Correction graduelle: ${enabled ? 'activée' : 'désactivée'}`);
+    console.log(`🔧 Smooth correction: ${enabled ? 'enabled' : 'disabled'}`);
     if (enabled) {
-      console.log(`   - Saut max: ${this.config.maxCorrectionJump}ms`);
-      console.log(`   - Taux: ${this.config.correctionRate * 100}%`);
-      console.log(`   - Seuil brutal: ${this.config.maxOffsetThreshold}ms`);
+      console.log(`   - Max jump: ${this.config.maxCorrectionJump}ms`);
+      console.log(`   - Rate: ${this.config.correctionRate * 100}%`);
+      console.log(`   - Brutal threshold: ${this.config.maxOffsetThreshold}ms`);
     }
   }
 
   /**
-   * Force une correction brutale (ignore la correction graduelle)
+   * Forces brutal correction (ignores gradual correction)
    */
   forceCorrection() {
     if (this.correctionInProgress) {
@@ -494,17 +494,17 @@ class TimeSync extends EventEmitter {
         finalOffset: this.currentOffset,
         forced: true
       });
-      console.log('⚡ Correction forcée appliquée');
+      console.log('⚡ Forced correction applied');
     }
   }
 }
 
-// Instance globale pour utilisation simple
+// Global instance for simple usage
 const timeSync = new TimeSync();
 
-// API simple - fonctions directes
+// Simple API - direct functions
 const api = {
-  // Méthodes principales
+  // Main methods
   sync: (options) => timeSync.sync(options),
   now: () => timeSync.now(),
   timestamp: () => timeSync.timestamp(),
@@ -516,7 +516,7 @@ const api = {
   startAutoSync: (interval) => timeSync.startAutoSync(interval),
   stopAutoSync: () => timeSync.stopAutoSync(),
   
-  // Correction graduelle
+  // Gradual correction
   setSmoothCorrection: (enabled, options) => timeSync.setSmoothCorrection(enabled, options),
   forceCorrection: () => timeSync.forceCorrection(),
   
@@ -524,16 +524,16 @@ const api = {
   startWebSocketServer: (port) => timeSync.startWebSocketServer(port),
   stopWebSocketServer: () => timeSync.stopWebSocketServer(),
   
-  // Utilitaires
+  // Utilities
   format: (date, format) => timeSync.format(date, format),
   diff: (date1, date2) => timeSync.diff(date1, date2),
   log: (message) => timeSync.log(message),
   
-  // Événements
+  // Events
   on: (event, callback) => timeSync.on(event, callback),
   off: (event, callback) => timeSync.off(event, callback),
   
-  // Classe pour usage avancé
+  // Class for advanced usage
   TimeSync
 };
 

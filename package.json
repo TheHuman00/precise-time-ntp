@@ -50,8 +50,5 @@
   "dependencies": {
     "ntp-client": "^0.5.3",
     "ws": "^8.17.0"
-  },
-  "devDependencies": {
-    "chalk": "^4.1.2"
   }
 }
