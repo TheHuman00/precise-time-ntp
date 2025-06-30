@@ -17,7 +17,7 @@
 
 ## 🎯 What makes precise-time-ntp special?
 
-✅ **Atomic Precision** - Sync with global NTP servers used by banks & governments  
+✅ **Atomic Precision** - Sync with global NTP servers  
 ✅ **Smart System Drift Correction** - Automatically compensates for clock drift over time  
 ✅ **Network Latency Compensation** - Accounts for network delays in time calculations  
 ✅ **Universal Compatibility** - Works in Node.js backend + HTML frontend  
