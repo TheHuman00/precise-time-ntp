@@ -1,6 +1,6 @@
 # ⏰ precise-time-ntp
 
-**The simplest way to add precise, synchronized time to your Node.js apps and websites**
+**The ultimate time synchronization library for Node.js applications**
 
 <div align="center">
 
@@ -9,67 +9,120 @@
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-precise--time--ntp-black?style=for-the-badge&logo=github)](https://github.com/TheHuman00/precise-time-ntp)
 
-**🚀 Add a real-time synchronized clock to any website in just 2 lines of code!**
+**🚀 Sync with atomic clocks • Create live HTML clocks • Handle system drift automatically**
 
 </div>
 
 ---
 
-## 🚀 Why precise-time-ntp?
+## 🎯 What makes precise-time-ntp special?
 
-✅ **Dead Simple** - 3 lines to sync with atomic clocks  
-✅ **Real-time WebSockets** - Live clocks in any webpage  
-✅ **Auto-Correction** - Handles network delays & system drift  
-✅ **Zero Dependencies Hassle** - Just install and go  
-✅ **Production Ready** - Automatic failover, error handling  
-✅ **Lightweight** - Under 50KB, blazing fast  
+✅ **Atomic Precision** - Sync with global NTP servers used by banks & governments  
+✅ **Smart System Drift Correction** - Automatically compensates for clock drift over time  
+✅ **Network Latency Compensation** - Accounts for network delays in time calculations  
+✅ **Universal Compatibility** - Works in Node.js backend + HTML frontend  
+✅ **Zero Configuration** - Works out of the box with intelligent defaults  
+✅ **Production Hardened** - Automatic failover, error handling, reconnection logic  
+✅ **Blazing Fast** - Under 50KB, optimized for performance  
 
 ---
 
-## ⚡ 30-Second Setup
+## ⚡ Quick Start
 
-### Install
 ```bash
 npm install precise-time-ntp
 ```
 
-### Basic Usage
 ```javascript
 const timeSync = require('precise-time-ntp');
 
-// Sync with atomic clocks
+// Sync with atomic time (automatically handles system drift)
 await timeSync.sync();
 
-// Get precise time (accurate to milliseconds!)
-console.log('Precise time:', timeSync.timestamp());
-console.log('Your system is off by:', timeSync.offset(), 'ms');
+// Get precise time - accurate to the millisecond
+console.log('Precise time:', timeSync.now());
+console.log('System is off by:', timeSync.offset(), 'ms');
+
+// Keep your app synchronized automatically
+timeSync.startAutoSync(300000); // Re-sync every 5 minutes
 ```
 
-### Test It Right Now
-```bash
-npm run basic        # Test basic time sync
-npm run websocket    # Start WebSocket server for HTML demo
-```
+**🎉 That's it!** Your app now uses atomic time with automatic drift correction.
 
 ---
 
-## 🎬 Live Demo
+## 📖 Usage Examples
 
-Want to see it in action? Run this:
+### 1. Basic Time Sync
+```javascript
+const timeSync = require('precise-time-ntp');
 
-```bash
-npm install precise-time-ntp
-npm run websocket
+// Sync with default NTP servers: pool.ntp.org, time.nist.gov, time.cloudflare.com
+await timeSync.sync();
+
+// Get precise time
+console.log('Precise time:', timeSync.now());
+console.log('ISO timestamp:', timeSync.timestamp());
+console.log('System offset:', timeSync.offset(), 'ms');
 ```
 
-Then create this HTML file and open it:
+### 2. Sync Configuration
+```javascript
+const timeSync = require('precise-time-ntp');
+
+// Configure sync behavior
+await timeSync.sync({
+    servers: ['time.cloudflare.com', 'time.google.com'],  // Custom NTP servers
+    timeout: 5000,                                        // 5s timeout per server
+    retries: 3,                                          // Retry 3 times if failed
+    samples: 4                                           // Take 4 samples for accuracy
+});
+```
+
+### 3. Auto-Sync (Recommended for Production)
+```javascript
+const timeSync = require('precise-time-ntp');
+
+await timeSync.sync();
+
+// Auto re-sync every 5 minutes (re-queries NTP servers to prevent drift)
+// Your computer's clock drifts ~1-2 seconds per day without this!
+timeSync.startAutoSync(300000);
+
+console.log('Current time:', timeSync.timestamp());
+```
+
+### 4. Smooth Time Correction (Avoid Time Jumps)
+```javascript
+const timeSync = require('precise-time-ntp');
+
+// Gradually adjust time instead of instant jumps (prevents breaking timers)
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 1000,     // Max 1s instant jump
+    correctionRate: 0.1,         // 10% gradual correction
+    maxOffsetThreshold: 5000     // Force instant if >5s off
+});
+
+await timeSync.sync();
+timeSync.startAutoSync(300000);
+```
+
+### 5. Live HTML Clock
+```javascript
+// Node.js server
+const timeSync = require('precise-time-ntp');
+
+await timeSync.sync();
+timeSync.startWebSocketServer(8080);
+timeSync.startAutoSync(300000);
+```
 
 ```html
-<!-- demo.html -->
+<!-- HTML file -->
 <h1 id="clock">Loading...</h1>
 <script>
 const ws = new WebSocket('ws://localhost:8080');
-ws.onmessage = e => {
+ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
     document.getElementById('clock').textContent = 
         new Date(data.data.timestamp).toLocaleTimeString();
@@ -78,152 +131,13 @@ setInterval(() => ws.send('{"type":"getTime"}'), 1000);
 </script>
 ```
 
-**🎉 Boom!** You have a live atomic clock in your browser.
-
----
-
-## 🌐 Live HTML Clock in 60 Seconds
-
-### 1️⃣ Start the Time Server
+### 6. Events & Error Handling
 ```javascript
 const timeSync = require('precise-time-ntp');
 
-await timeSync.sync();                    // Sync with atomic clocks
-timeSync.startWebSocketServer(8080);      // Start WebSocket server  
-timeSync.startAutoSync(60000);            // Stay synchronized
+await timeSync.sync();
 
-console.log('⏰ Time server ready: ws://localhost:8080');
-```
-
-### 2️⃣ Add to Any Webpage
-```html
-<!DOCTYPE html>
-<html>
-<head><title>Live Clock</title></head>
-<body style="font-family: Arial; text-align: center; padding: 50px;">
-    <h1 id="clock" style="font-size: 4rem; color: #2c3e50;">--:--:--</h1>
-    <p id="status">Connecting...</p>
-    
-    <script>
-        const ws = new WebSocket('ws://localhost:8080');
-        const clock = document.getElementById('clock');
-        const status = document.getElementById('status');
-        
-        ws.onopen = () => status.textContent = 'Connected to precise time ✅';
-        
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'time') {
-                clock.textContent = new Date(data.data.timestamp).toLocaleTimeString();
-            }
-        };
-        
-        // Request time every second
-        setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'getTime' }));
-            }
-        }, 1000);
-    </script>
-</body>
-</html>
-```
-
-**🎉 That's it!** You now have a live clock synchronized with atomic time servers.
-
----
-
-## 🎯 What Makes This Special?
-
-### 🔬 **Atomic-Level Precision**
-Syncs with global NTP servers (the same ones used by banks and governments)
-
-**Default NTP Servers Used:**
-- `pool.ntp.org` - Global pool of time servers
-- `time.nist.gov` - US National Institute of Standards  
-- `time.cloudflare.com` - Cloudflare's anycast time service
-
-*The library automatically tries multiple servers for reliability. You can also specify your own servers.*
-
-### 🌍 **Works Everywhere**  
-Node.js backend ✓ Browser frontend ✓ Any device with internet ✓
-
-### 🔄 **Smart Auto-Sync**
-Automatically handles network delays, system clock drift, and server failovers
-
-### ⚡ **Real-time Broadcasting**
-WebSocket server broadcasts precise time to unlimited browser clients
-
-### 🛡️ **Production Hardened**
-Error handling, reconnection logic, and graceful degradation built-in
-
----
-
-## 📋 More Examples
-
-### Basic Time Sync
-```bash
-npm run basic        # Simple sync demo
-```
-
-### Auto-Sync Background Service  
-```bash
-npm run auto-sync    # Keep time synchronized automatically
-```
-
-### WebSocket HTML Clock
-```bash
-npm run websocket    # Start time server
-# Then open examples/clock.html
-```
-
----
-
-## 🏗️ Use Cases
-
-### 💼 **Business Applications**
-- **Financial systems** - Precise transaction timestamps
-- **Logging platforms** - Synchronized log entries across servers  
-- **Performance monitoring** - Accurate timing measurements
-
-### 🌐 **Web Applications**
-- **Live dashboards** - Real-time synchronized clocks
-- **Event platforms** - Countdown timers that stay in sync
-- **Gaming** - Synchronized game timers and events
-
-### 🔧 **Developer Tools**
-- **Microservices** - Consistent timestamps across services
-- **API rate limiting** - Precise time-based quotas
-- **Scheduled tasks** - Exact timing for cron jobs
-
----
-
-## 🎮 Advanced Features
-
-### Smooth Time Correction
-```javascript
-// Avoid jarring time jumps
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,   // Max 1s instant correction
-    correctionRate: 0.1,       // Gradual 10% correction rate
-    maxOffsetThreshold: 5000   // Beyond 5s, force correction
-});
-```
-
-### Custom NTP Servers
-```javascript
-// By default, uses: pool.ntp.org, time.nist.gov, time.cloudflare.com
-// You can override with your own servers:
-await timeSync.sync({
-    servers: ['time.cloudflare.com', 'time.google.com', 'time.apple.com'],
-    timeout: 5000,
-    autoSync: true,
-    autoSyncInterval: 300000  // 5 minutes
-});
-```
-
-### Event Monitoring
-```javascript
+// Listen to sync events
 timeSync.on('sync', (data) => {
     console.log(`✅ Synced with ${data.server} (offset: ${data.offset}ms)`);
 });
@@ -237,62 +151,50 @@ timeSync.on('error', (error) => {
 
 ## 📊 API Reference
 
-| Method | Description | Example |
-|--------|-------------|---------|
-| `sync()` | Synchronize with NTP servers | `await timeSync.sync()` |
-| `now()` | Get current precise time | `timeSync.now()` |
-| `timestamp()` | ISO timestamp string | `timeSync.timestamp()` |
-| `offset()` | System clock offset in ms | `timeSync.offset()` |
-| `startAutoSync(ms)` | Auto-sync every X milliseconds | `timeSync.startAutoSync(60000)` |
-| `startWebSocketServer(port)` | Start WebSocket time server | `timeSync.startWebSocketServer(8080)` |
+| Method | Purpose | Example |
+|--------|---------|---------|
+| `sync()` | Sync with NTP servers | `await timeSync.sync()` |
+| `now()` | Get precise timestamp (ms) | `timeSync.now()` |
+| `timestamp()` | Get ISO string | `timeSync.timestamp()` |
+| `offset()` | Get system drift (ms) | `timeSync.offset()` |
+| `startAutoSync(ms)` | Auto-sync every X ms | `timeSync.startAutoSync(300000)` |
+| `stopAutoSync()` | Stop auto-sync | `timeSync.stopAutoSync()` |
+| `setSmoothCorrection()` | Configure gradual time correction | `timeSync.setSmoothCorrection(true, options)` |
+| `startWebSocketServer(port)` | Enable HTML integration | `timeSync.startWebSocketServer(8080)` |
 
----
+### Events
+```javascript
+timeSync.on('sync', (data) => {
+    console.log(`Synced with ${data.server}, offset: ${data.offset}ms`);
+});
 
-## 🔧 Installation & Setup
-
-### Requirements
-- **Node.js** 14.0.0 or higher
-- **Internet connection** for NTP sync
-
-### Installation
-```bash
-npm install precise-time-ntp
+timeSync.on('error', (error) => {
+    console.log(`Sync failed: ${error.message}`);
+});
 ```
 
-### Quick Test
+## 📄 Complete Documentation
+
+For detailed guides, advanced configuration, and troubleshooting:
+
+**👉 [View Full Documentation](docs/)**
+
+- [Quick Start Guide](docs/quick-start.md) - Get started in 5 minutes
+- [Complete API Reference](docs/api-reference.md) - All methods and options  
+- [WebSocket Integration](docs/websocket-guide.md) - Real-time HTML clocks
+- [Smooth Correction Guide](docs/smooth-correction.md) - Avoid time jumps
+- [FAQ & Troubleshooting](docs/faq.md) - Common questions
+
+## Test It Now
 ```bash
-npm run basic        # Test basic sync
-npm run websocket    # Start WebSocket server
+npm run basic        # Simple sync test
+npm run auto-sync    # Auto-sync test  
+npm run websocket    # WebSocket + HTML demo
 ```
-
----
-
-## 🌟 Why Developers Love It
-
-> *"Finally, a time sync library that just works. The WebSocket feature is a game-changer for our real-time dashboard."*  
-> — Sarah K., Senior Developer
-
-> *"Setup took 5 minutes. Been running in production for 6 months without issues."*  
-> — Mike R., DevOps Engineer
-
-> *"The HTML integration is so simple, our frontend team had it working in an hour."*  
-> — Alex T., Full-Stack Developer
-
----
-
-## 📚 Documentation
-
-- **[Quick Start Guide](docs/quick-start.md)** - Get running in 5 minutes
-- **[WebSocket Integration](docs/websocket-guide.md)** - HTML clock examples  
-- **[API Reference](docs/api-reference.md)** - Complete method documentation
-- **[Advanced Features](docs/smooth-correction.md)** - Smooth correction, custom servers
-- **[FAQ](docs/faq.md)** - Common questions & troubleshooting
-
----
 
 ## 📄 License
 
-MIT License - use it anywhere, commercially or personally.
+MIT License - use anywhere, commercially or personally.
 
 ---
 

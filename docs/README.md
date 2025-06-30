@@ -1,35 +1,42 @@
-# 📚 TimeSync Documentation
+# 📚 precise-time-ntp Documentation
 
-## Getting Started
+## 🚀 Getting Started
 
-- **[Quick Start Guide](quick-start.md)** - Get started in 5 minutes
-- **[Complete API Reference](api-reference.md)** - All available methods
+- **[Quick Start Guide](quick-start.md)** - Get up and running in 5 minutes
+- **[Complete API Reference](api-reference.md)** - All methods and configuration options
 - **[WebSocket Integration](websocket-guide.md)** - Real-time HTML clocks with step-by-step examples
-- **[FAQ](faq.md)** - Frequently asked questions
+- **[FAQ](faq.md)** - Common questions and troubleshooting
 
-## Advanced Features
+## ⚡ Advanced Features
 
-- **[Smooth Correction](smooth-correction.md)** - Avoid time jumps with gradual corrections
+- **[Smooth Correction](smooth-correction.md)** - Avoid jarring time jumps with gradual adjustments
 
-## Use Cases
+## 💡 Example Use Cases
 
-- **Real-time web applications** - Synchronized clocks in browsers
-- **Logging systems** - Precise timestamps for events  
-- **Performance monitoring** - Accurate time measurements
-- **Gaming applications** - Synchronized game timers
-- **Financial systems** - Transaction timestamps
+| Use Case | Description |
+|----------|-------------|
+| **Real-time web apps** | Synchronized clocks and timers in browsers |
+| **Logging systems** | Precise timestamps for events and debugging |
+| **Performance monitoring** | Accurate time measurements and benchmarks |
+| **Gaming applications** | Synchronized game timers and events |
+| **Financial systems** | Precise transaction timestamps |
 
-## Quick Examples
+## 🏃‍♂️ Quick Test Drive
 
-### Basic Time Sync
+Try these examples from your project root:
+
 ```bash
-# From the project root
+# Basic synchronization
 npm run basic
+
+# WebSocket HTML clock  
+npm run websocket
+# Then open examples/clock.html in your browser
+
+# Auto-sync example
+npm run auto-sync
 ```
 
-### WebSocket HTML Clock
-```bash
-# From the project root
-npm run websocket
-# Then open examples/clock.html
-```
+## 📖 Full Documentation
+
+For the complete API documentation and advanced usage patterns, see the individual guides above.

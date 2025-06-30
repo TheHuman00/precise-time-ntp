@@ -2,52 +2,229 @@
 
 ## The Time Jump Problem
 
-During auto-synchronization, if your system clock has a significant offset, brutal correction can create problems:
+When your system clock has a significant offset, instant correction can cause serious issues in running applications.
 
-### Potential Issues
+### What Happens Without Smooth Correction
 
 ```javascript
 // ❌ PROBLEM: Without smooth correction
-const timeSync = require('precise-time-sync');
+const timeSync = require('precise-time-ntp');
 
-await timeSync.sync(); // Initial offset: 2000ms
-timeSync.startAutoSync(300000); // Auto-sync every 5min
+await timeSync.sync(); // System is 3 seconds behind
 
-// Meanwhile, offset may increase...
-// Next sync: 3500ms offset
-// → BRUTAL JUMP of 3.5 seconds!
-
-setInterval(() => {
-  console.log(timeSync.now()); // Can "go back" in time!
-}, 1000);
+// Later, during auto-sync...
+// Time instantly jumps forward 3 seconds!
+// This can break:
+// - Running timers and intervals
+// - Performance measurements  
+// - Real-time applications
+// - Log timestamps
 ```
 
-**Consequences:**
-- ⚠️ Logs with inconsistent timestamps
-- ⚠️ Animations that jump
-- ⚠️ Real-time applications disrupted
-- ⚠️ Performance measurements skewed
+**Real-world consequences:**
+- ⚠️ `setTimeout()` and `setInterval()` behave erratically
+- ⚠️ Performance measurements show negative durations
+- ⚠️ Database timestamps become inconsistent
+- ⚠️ Real-time games and animations stutter
+- ⚠️ Monitoring systems show false spikes
 
-## The Solution: Smooth Correction
+## The Solution: Gradual Correction
 
-### Recommended Configuration
+Smooth correction gradually adjusts time over multiple sync cycles instead of making instant jumps.
+
+### Basic Setup
 
 ```javascript
-const timeSync = require('precise-time-sync');
+const timeSync = require('precise-time-ntp');
 
-// ✅ SOLUTION: Smooth correction
+// Enable smooth correction (recommended for production)
 timeSync.setSmoothCorrection(true, {
-  maxCorrectionJump: 1000,    // Max 1s brutal correction
-  correctionRate: 0.1,        // Correct 10% of offset per sync
-  maxOffsetThreshold: 5000    // Beyond 5s, brutal correction anyway
+    maxCorrectionJump: 1000,     // Max 1s instant jump
+    correctionRate: 0.1,         // Correct 10% per sync cycle
+    maxOffsetThreshold: 5000     // Force instant if >5s off
 });
 
 await timeSync.sync();
-timeSync.startAutoSync(300000);
+timeSync.startAutoSync(300000); // Auto-sync every 5 minutes
+```
 
-// Now corrections are smooth!
+### How It Works
+
+**Example: System is 3 seconds behind**
+
+Without smooth correction:
+```
+Sync 1: +3000ms instant jump ⚡ (jarring!)
+```
+
+With smooth correction (10% rate):
+```
+Sync 1: +300ms (10% of 3000ms)
+Sync 2: +270ms (10% of remaining 2700ms)  
+Sync 3: +243ms (10% of remaining 2430ms)
+...
+Total: Gradually corrects over ~10 sync cycles 🌊
+```
+
+## Configuration Options
+
+### `maxCorrectionJump` (Default: 1000ms)
+Maximum instant correction allowed before switching to gradual mode.
+
+```javascript
+// Small jumps allowed, good for real-time apps
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 500  // Only allow 0.5s instant jumps
+});
+
+// Larger jumps allowed, faster correction
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 2000  // Allow 2s instant jumps
+});
+```
+
+### `correctionRate` (Default: 0.1)
+How much of the offset to correct per sync cycle (0.0 to 1.0).
+
+```javascript
+// Slow, gentle correction
+timeSync.setSmoothCorrection(true, {
+    correctionRate: 0.05  // 5% per cycle (20 cycles to correct)
+});
+
+// Fast correction
+timeSync.setSmoothCorrection(true, {
+    correctionRate: 0.2   // 20% per cycle (5 cycles to correct)
+});
+```
+
+### `maxOffsetThreshold` (Default: 10000ms)
+Force instant correction if offset exceeds this value.
+
+```javascript
+// Force correction sooner
+timeSync.setSmoothCorrection(true, {
+    maxOffsetThreshold: 3000  // Force instant if >3s off
+});
+
+// Allow larger gradual corrections  
+timeSync.setSmoothCorrection(true, {
+    maxOffsetThreshold: 30000  // Force instant only if >30s off
+});
+```
+
+## Production Configurations
+
+### High-Precision Applications
+For trading, monitoring, or real-time systems:
+
+```javascript
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 100,      // Very small instant jumps
+    correctionRate: 0.05,        // Gentle 5% correction
+    maxOffsetThreshold: 1000     // Force correction at 1s
+});
+
+// Sync frequently to minimize drift
+timeSync.startAutoSync(60000); // Every minute
+```
+
+### General Web Applications
+For typical web apps and APIs:
+
+```javascript
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 1000,     // 1s instant jumps OK
+    correctionRate: 0.1,         // 10% correction
+    maxOffsetThreshold: 5000     // Force at 5s
+});
+
+// Normal sync frequency
+timeSync.startAutoSync(300000); // Every 5 minutes
+```
+
+### Background Services
+For logging, cron jobs, or batch processing:
+
+```javascript
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 2000,     // 2s jumps acceptable
+    correctionRate: 0.2,         // Faster 20% correction
+    maxOffsetThreshold: 10000    // Force at 10s
+});
+
+// Less frequent sync
+timeSync.startAutoSync(600000); // Every 10 minutes
+```
+
+## Monitoring Smooth Correction
+
+### Track Correction Progress
+
+```javascript
+timeSync.on('sync', (data) => {
+    console.log(`Server: ${data.server}`);
+    console.log(`Offset before: ${data.offsetBefore}ms`);
+    console.log(`Offset after: ${data.offsetAfter}ms`);
+    console.log(`Correction applied: ${data.correctionApplied}ms`);
+    console.log(`Smooth mode: ${data.smoothMode ? 'ON' : 'OFF'}`);
+});
+```
+
+### Debug Correction Behavior
+
+```javascript
+const timeSync = require('precise-time-ntp');
+
+// Enable detailed logging
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 1000,
+    correctionRate: 0.1,
+    maxOffsetThreshold: 5000,
+    debug: true  // Log correction decisions
+});
+
+await timeSync.sync();
+```
+
+## Disabling Smooth Correction
+
+For testing or when you want instant corrections:
+
+```javascript
+// Disable smooth correction (default behavior)
+timeSync.setSmoothCorrection(false);
+
+// Or completely skip the call
+// timeSync.setSmoothCorrection() not called = disabled
+```
+
+## Best Practices
+
+### ✅ Enable for Production
+Always enable smooth correction in production to prevent time jump issues.
+
+### ✅ Tune for Your Use Case
+- **Real-time apps**: Small jumps, slow correction
+- **Background services**: Larger jumps, faster correction
+- **High-precision**: Frequent sync, minimal jumps
+
+### ✅ Monitor Offset
+Watch the offset values to tune your configuration:
+
+```javascript
 setInterval(() => {
-  console.log(timeSync.now()); // Time always increasing
+    const offset = timeSync.offset();
+    if (Math.abs(offset) > 1000) {
+        console.warn(`Large offset detected: ${offset}ms`);
+    }
+}, 60000);
+```
+
+### ✅ Test Edge Cases
+Test your application with simulated large time offsets to ensure smooth correction works as expected.
+
+Smooth correction ensures your application maintains stable, monotonic time even when system clocks drift significantly! 🎯
 }, 1000);
 ```
 
@@ -244,7 +421,7 @@ L'offset ne change que si :
 ### Surveillance des Dérives
 
 ```javascript
-const timeSync = require('precise-time-sync');
+const timeSync = require('precise-time-ntp');
 
 let lastOffset = 0;
 let driftHistory = [];
@@ -287,7 +464,7 @@ timeSync.on('sync', (data) => {
 
 ```javascript
 // Script de surveillance d'horloge
-const timeSync = require('precise-time-sync');
+const timeSync = require('precise-time-ntp');
 
 async function monitorClock() {
   await timeSync.sync();
