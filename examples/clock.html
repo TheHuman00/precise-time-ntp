@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronized Clock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: #f5f5f5;
+        }
+        .clock {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+        }
+        .status {
+            font-size: 1rem;
+            margin: 10px 0;
+        }
+        .connected { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>⏰ Precise Time</h1>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="status" id="status">Connecting...</div>
+    
+    <script>
+        // Connect to TimeSync WebSocket server
+        const ws = new WebSocket('ws://localhost:8080');
+        const clock = document.getElementById('clock');
+        const status = document.getElementById('status');
+        
+        ws.onopen = () => {
+            status.textContent = 'Connected ✅';
+            status.className = 'status connected';
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'time') {
+                const time = new Date(data.data.timestamp);
+                clock.textContent = time.toLocaleTimeString();
+            }
+        };
+        
+        ws.onclose = () => {
+            status.textContent = 'Disconnected ❌';
+            status.className = 'status error';
+        };
+        
+        // Request time every second
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'getTime' }));
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

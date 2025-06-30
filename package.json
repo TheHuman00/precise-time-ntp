@@ -1,0 +1,61 @@
+{
+  "name": "precise-time-ntp",
+  "version": "1.0.0",
+  "description": "🚀 Ultra-simple NTP time synchronization with real-time WebSocket support. Add precise clocks to any webpage in 2 lines of code!",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js",
+    "start": "node examples/websocket.js",
+    "basic": "node examples/basic.js",
+    "auto-sync": "node examples/auto-sync.js",
+    "websocket": "node examples/websocket.js"
+  }, 
+  "keywords": [
+    "ntp",
+    "time",
+    "synchronization",
+    "clock",
+    "precise-time",
+    "time-sync",
+    "network-time",
+    "websocket",
+    "real-time",
+    "timestamp",
+    "html-clock",
+    "web-clock",
+    "synchronized-time",
+    "browser-clock",
+    "time-server"
+  ],
+  "author": "TheHuman00",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheHuman00/precise-time-ntp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TheHuman00/precise-time-ntp/issues"
+  },
+  "homepage": "https://github.com/TheHuman00/precise-time-ntp#readme",
+  "files": [
+    "index.js",
+    "examples/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "ntp-client": "^0.5.3",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "chalk": "^4.1.2"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/yourusername"
+  }
+}
