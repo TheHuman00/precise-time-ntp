@@ -16,7 +16,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 ### How to Report
 
 1. **DO NOT** create a public GitHub issue for security vulnerabilities
-2. Email us directly at: [security.goon897@aleeas.com]
+2. Email us directly at: [precise-time-ntp.broiling732@aleeas.com]
 3. Include as much information as possible:
    - Description of the vulnerability
    - Steps to reproduce
