@@ -1,6 +1,6 @@
 {
   "name": "precise-time-ntp",
-  "version": "1.0.6",
+  "version": "2.0.1",
   "description": "⏰ Simple NTP time sync for Node.js - Auto-drift, WebSocket & HTML clocks",
   "main": "index.js",
   "scripts": {
