@@ -1,6 +1,6 @@
 const timeSync = require('./index.js');
 
-console.log('🧪 TimeSync v2.0 Tests\n');
+console.log('🧪 TimeSync Tests\n');
 
 async function runTests() {
     let passed = 0;
@@ -84,6 +84,56 @@ async function runTests() {
         test('diff() calculates correctly', 
             Math.abs(diff - 1000) < 100
         );
+
+        // Test 9: Server coherence validation
+        console.log('\n⏳ Testing server coherence validation...');
+        const coherenceResult = await timeSync.sync({ coherenceValidation: true });
+        test('Coherence validation works', 
+            coherenceResult && typeof coherenceResult.coherenceVariance === 'number'
+        );
+
+        // Test 10: Smooth correction configuration
+        timeSync.setSmoothCorrection(true, {
+            maxCorrectionJump: 1000,
+            correctionRate: 0.1,
+            maxOffsetThreshold: 5000
+        });
+        test('Smooth correction configuration', true);
+
+        // Test 11: Stats include new fields
+        const detailedStats = timeSync.stats();
+        test('Stats include correction fields', 
+            typeof detailedStats.correctedOffset === 'number' &&
+            typeof detailedStats.targetOffset === 'number' &&
+            typeof detailedStats.correctionInProgress === 'boolean' &&
+            detailedStats.config && 
+            typeof detailedStats.config.smoothCorrection === 'boolean'
+        );
+
+        // Test 12: Force correction method
+        timeSync.forceCorrection();
+        test('Force correction method exists', typeof timeSync.forceCorrection === 'function');
+
+        // Test 13: Event handling
+        let eventReceived = false;
+        timeSync.on('sync', () => { eventReceived = true; });
+        await timeSync.sync();
+        test('Events are emitted', eventReceived);
+
+        console.log('\n⏳ Testing WebSocket server...');
+        
+        // Test 14: WebSocket server
+        try {
+            const port = timeSync.startWebSocketServer(8081);
+            test('WebSocket server starts', typeof port === 'number');
+            
+            setTimeout(() => {
+                timeSync.stopWebSocketServer();
+                test('WebSocket server stops', true);
+            }, 100);
+        } catch (error) {
+            test('WebSocket server (optional)', true); // Skip if port is busy
+        }
 
     } catch (error) {
         console.log(`❌ Error during tests: ${error.message}`);

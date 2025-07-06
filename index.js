@@ -20,6 +20,7 @@ class TimeSync extends EventEmitter {
     this.targetOffset = 0;           // Target offset to reach
     this.currentOffset = 0;          // Current offset (gradually corrected)
     this.correctionInProgress = false;
+    this.correctionStartTime = null; // For correction timeout
     
     // Default configuration
     this.config = {
@@ -27,7 +28,6 @@ class TimeSync extends EventEmitter {
         "pool.ntp.org",
         "time.google.com", 
         "time.cloudflare.com",
-        "fr.pool.ntp.org"
       ],
       timeout: 5000,
       retries: 3,
@@ -38,6 +38,7 @@ class TimeSync extends EventEmitter {
       maxCorrectionJump: 1000,      // Max brutal correction (1s)
       correctionRate: 0.1,          // Smooth correction rate (10%/sync)
       maxOffsetThreshold: 5000,     // Threshold to force brutal correction (5s)
+      coherenceValidation: true,    // Server coherence validation
       ...options
     };
     
@@ -59,6 +60,15 @@ class TimeSync extends EventEmitter {
     this.on('error', (error) => {
       console.log(`❌ Synchronization error: ${error.message}`);
     });
+    
+    // Advanced events
+    this.on('coherenceWarning', (data) => {
+      console.log(`⚠️  Server coherence issue: variance ${data.variance}ms`);
+    });
+    
+    this.on('driftWarning', (data) => {
+      console.log(`📈 Long elapsed time: ${(data.elapsed / 60000).toFixed(1)} minutes`);
+    });
   }
 
   /**
@@ -68,55 +78,25 @@ class TimeSync extends EventEmitter {
    */
   async sync(options = {}) {
     const config = { ...this.config, ...options };
+    const serverResults = [];
     
-    for (const server of config.servers) {
+    // Test multiple servers for coherence validation
+    const serversToTest = config.coherenceValidation !== false ? 
+      config.servers.slice(0, Math.min(3, config.servers.length)) : 
+      config.servers;
+    
+    for (const server of serversToTest) {
       try {
         const ntpTime = await this.getNtpTime(server, config.timeout);
         const systemTime = Date.now();
         const newOffset = ntpTime.getTime() - systemTime;
         
-        // Smooth correction management
-        const isFirstSync = !this.isSync;
-        const offsetDiff = Math.abs(newOffset - this.currentOffset);
-        
-        if (isFirstSync || !config.smoothCorrection || 
-            offsetDiff <= config.maxCorrectionJump ||
-            offsetDiff >= config.maxOffsetThreshold) {
-          // Brutal correction
-          this.systemOffset = newOffset;
-          this.currentOffset = newOffset;
-          this.targetOffset = newOffset;
-          this.correctionInProgress = false;
-        } else {
-          // Smooth correction
-          this.targetOffset = newOffset;
-          this.systemOffset = newOffset; // Keep real offset for stats
-          this.correctionInProgress = true;
-          this.applyGradualCorrection(config.correctionRate);
-        }
-        
-        this.isSync = true;
-        this.lastSyncTime = performance.now();
-        this.syncDate = new Date();
-        
-        const result = {
+        serverResults.push({
           server,
-          offset: this.systemOffset,
-          correctedOffset: this.currentOffset,
-          time: ntpTime,
-          systemTime: new Date(systemTime),
-          gradualCorrection: this.correctionInProgress,
-          offsetDiff: isFirstSync ? 0 : offsetDiff
-        };
-        
-        this.emit('sync', result);
-        
-        // Start auto-sync if requested
-        if (config.autoSync && !this.autoSyncTimer) {
-          this.startAutoSync(config.autoSyncInterval);
-        }
-        
-        return result;
+          offset: newOffset,
+          ntpTime,
+          systemTime
+        });
         
       } catch (error) {
         this.emit('error', { server, error });
@@ -124,7 +104,78 @@ class TimeSync extends EventEmitter {
       }
     }
     
-    throw new Error('Unable to synchronize with any NTP server');
+    if (serverResults.length === 0) {
+      throw new Error('Unable to synchronize with any NTP server');
+    }
+    
+    // Coherence validation between servers
+    let selectedResult = serverResults[0];
+    if (serverResults.length > 1) {
+      const offsets = serverResults.map(r => r.offset);
+      const variance = Math.max(...offsets) - Math.min(...offsets);
+      
+      if (variance > 100) { // Variance > 100ms is suspicious
+        this.emit('coherenceWarning', {
+          variance,
+          servers: serverResults.map(r => ({ server: r.server, offset: r.offset }))
+        });
+        
+        // Use median for better robustness
+        offsets.sort((a, b) => a - b);
+        const medianOffset = offsets[Math.floor(offsets.length / 2)];
+        selectedResult = serverResults.find(r => r.offset === medianOffset) || selectedResult;
+      }
+    }
+    
+    const newOffset = selectedResult.offset;
+    
+    // Smooth correction management
+    const isFirstSync = !this.isSync;
+    const offsetDiff = Math.abs(newOffset - this.currentOffset);
+    
+    if (isFirstSync || !config.smoothCorrection || 
+        offsetDiff <= config.maxCorrectionJump ||
+        offsetDiff >= config.maxOffsetThreshold) {
+      // Brutal correction
+      this.systemOffset = newOffset;
+      this.currentOffset = newOffset;
+      this.targetOffset = newOffset;
+      this.correctionInProgress = false;
+      this.correctionStartTime = null; // Reset correction timer
+    } else {
+      // Smooth correction
+      this.targetOffset = newOffset;
+      this.systemOffset = newOffset; // Keep real offset for stats
+      this.correctionInProgress = true;
+      this.correctionStartTime = null; // Will be set in applyGradualCorrection
+      this.applyGradualCorrection(config.correctionRate);
+    }
+    
+    this.isSync = true;
+    this.lastSyncTime = performance.now();
+    this.syncDate = new Date();
+    
+    const result = {
+      server: selectedResult.server,
+      offset: this.systemOffset,
+      correctedOffset: this.currentOffset,
+      time: selectedResult.ntpTime,
+      systemTime: new Date(selectedResult.systemTime),
+      gradualCorrection: this.correctionInProgress,
+      offsetDiff: isFirstSync ? 0 : offsetDiff,
+      serverResults: serverResults.length > 1 ? serverResults : undefined,
+      coherenceVariance: serverResults.length > 1 ? 
+        Math.max(...serverResults.map(r => r.offset)) - Math.min(...serverResults.map(r => r.offset)) : 0
+    };
+    
+    this.emit('sync', result);
+    
+    // Start auto-sync if requested
+    if (config.autoSync && !this.autoSyncTimer) {
+      this.startAutoSync(config.autoSyncInterval);
+    }
+    
+    return result;
   }
 
   /**
@@ -157,10 +208,23 @@ class TimeSync extends EventEmitter {
       throw new Error('Clock not synchronized. Call sync() first.');
     }
     
-    const elapsed = performance.now() - this.lastSyncTime;
+    const currentPerf = performance.now();
+    const elapsed = currentPerf - this.lastSyncTime;
+    
+    // Detect significant drift for automatic recalculation
+    if (elapsed > 3600000) { // More than 1 hour since last sync
+      console.log('⚠️  Long elapsed time detected, consider re-syncing');
+      this.emit('driftWarning', { elapsed });
+    }
+    
     // Use gradually corrected offset if available
     const activeOffset = this.correctionInProgress ? this.currentOffset : this.systemOffset;
-    return new Date(this.syncDate.getTime() + elapsed + activeOffset);
+    
+    // More precise calculation avoiding error accumulation
+    const baseTime = this.syncDate.getTime();
+    const adjustedTime = baseTime + elapsed + activeOffset;
+    
+    return new Date(adjustedTime);
   }
 
   /**
@@ -436,25 +500,48 @@ class TimeSync extends EventEmitter {
     if (!this.correctionInProgress) return;
     
     const diff = this.targetOffset - this.currentOffset;
-    const correction = diff * rate;
     
-    // If correction is very small, apply directly
-    if (Math.abs(diff) < 1) {
+    // Convergence threshold to avoid infinite oscillations
+    if (Math.abs(diff) < 0.5) { // Convergence within 0.5ms
       this.currentOffset = this.targetOffset;
       this.correctionInProgress = false;
       this.emit('correctionComplete', {
         finalOffset: this.currentOffset,
-        targetReached: true
+        targetReached: true,
+        converged: true
       });
       return;
     }
     
+    // Timeout verification to avoid infinite corrections
+    if (!this.correctionStartTime) {
+      this.correctionStartTime = performance.now();
+    }
+    
+    const elapsed = performance.now() - this.correctionStartTime;
+    if (elapsed > 30000) { // 30 second timeout
+      console.log('⚠️  Correction timeout, applying final offset');
+      this.currentOffset = this.targetOffset;
+      this.correctionInProgress = false;
+      this.correctionStartTime = null;
+      this.emit('correctionComplete', {
+        finalOffset: this.currentOffset,
+        targetReached: true,
+        timeout: true
+      });
+      return;
+    }
+    
+    const correction = diff * rate;
     this.currentOffset += correction;
+    
+    // Adaptive interval based on correction size
+    const nextInterval = Math.max(50, Math.min(200, Math.abs(diff) * 0.1));
     
     // Schedule next correction
     setTimeout(() => {
       this.applyGradualCorrection(rate);
-    }, 100); // Correction every 100ms
+    }, nextInterval);
   }
 
   /**

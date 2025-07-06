@@ -15,9 +15,10 @@ await timeSync.sync();
 // Advanced configuration
 await timeSync.sync({
     servers: ['time.cloudflare.com', 'time.google.com'],
-    timeout: 5000,      // Timeout per server (ms)
-    retries: 3,         // Retry attempts per server
-    samples: 4          // Number of samples for accuracy
+    timeout: 5000,           // Timeout per server (ms)
+    retries: 3,              // Retry attempts per server
+    samples: 4,              // Number of samples for accuracy
+    coherenceValidation: true // Test multiple servers for consistency
 });
 ```
 
@@ -254,15 +255,37 @@ timeSync.log('Important message'); // [2024-12-30T15:30:45.123Z] Important messa
 ```
 
 ### `stats()`
-Returns synchronization statistics.
+Returns detailed synchronization statistics and diagnostics.
 
 ```javascript
 const stats = timeSync.stats();
-console.log(stats.offset);              // Current offset
-console.log(stats.synchronized);        // Sync state
-console.log(stats.lastSync);           // Last sync
-console.log(stats.correctionInProgress); // Correction in progress
+
+// Core information
+console.log('Synchronized:', stats.synchronized);    // true/false
+console.log('Current offset:', stats.offset, 'ms');  // System time drift
+console.log('Last sync time:', stats.lastSync);      // Date object
+console.log('Uptime:', stats.uptime, 'ms');         // Time since start
+
+// Smooth correction (if enabled)
+console.log('Target offset:', stats.targetOffset, 'ms');       // Goal offset
+console.log('Applied offset:', stats.correctedOffset, 'ms');   // Current applied
+console.log('Correction active:', stats.correctionInProgress); // true/false
+
+// Configuration
+console.log('Smooth correction enabled:', stats.config.smoothCorrection);
+console.log('Max correction jump:', stats.config.maxCorrectionJump, 'ms');
+console.log('Correction rate:', stats.config.correctionRate);
 ```
+
+**Returns:**
+- `synchronized` (boolean) - Whether time has been synced
+- `offset` (number) - Current system time offset in milliseconds
+- `correctedOffset` (number) - Currently applied offset (with smooth correction)
+- `targetOffset` (number) - Target offset for smooth correction
+- `lastSync` (Date) - Timestamp of last successful sync
+- `uptime` (number) - Milliseconds since library initialization
+- `correctionInProgress` (boolean) - Whether smooth correction is active
+- `config` (object) - Current configuration settings
 
 ## Events
 
@@ -294,6 +317,26 @@ timeSync.on('correctionComplete', (data) => {
 });
 ```
 
+### `coherenceWarning`
+Emitted when server variance is detected during coherence validation.
+
+```javascript
+timeSync.on('coherenceWarning', (data) => {
+    console.log(`Server variance: ${data.variance}ms`);
+    console.log('Servers tested:', data.servers);
+});
+```
+
+### `driftWarning`
+Emitted when system has been running for a long time without sync.
+
+```javascript
+timeSync.on('driftWarning', (data) => {
+    const hours = (data.elapsed / 3600000).toFixed(1);
+    console.log(`System drift: ${hours}h without sync`);
+});
+```
+
 ## Configuration Options
 
 ### Default NTP servers
@@ -310,13 +353,14 @@ timeSync.on('correctionComplete', (data) => {
 ```javascript
 await timeSync.sync({
     servers: ['custom.ntp.server'],
-    timeout: 10000,           // Timeout per server (ms)
-    retries: 5,               // Number of attempts
-    autoSync: true,           // Auto-sync after sync
-    autoSyncInterval: 600000, // Auto-sync interval (ms)
-    smoothCorrection: true,   // Smooth correction
-    maxCorrectionJump: 500,   // Max brutal correction (ms)
-    correctionRate: 0.05,     // Correction rate (0-1)
-    maxOffsetThreshold: 3000  // Brutal correction threshold (ms)
+    timeout: 10000,             // Timeout per server (ms)
+    retries: 5,                 // Number of attempts
+    coherenceValidation: true,  // Validate server consistency
+    autoSync: true,             // Auto-sync after sync
+    autoSyncInterval: 600000,   // Auto-sync interval (ms)
+    smoothCorrection: true,     // Smooth correction
+    maxCorrectionJump: 500,     // Max brutal correction (ms)
+    correctionRate: 0.05,       // Correction rate (0-1)
+    maxOffsetThreshold: 3000    // Brutal correction threshold (ms)
 });
 ```

@@ -1,4 +1,65 @@
-# 🔧 Smooth Time Correction
+# Smooth Time Correction
+
+The smooth correction feature provides gradual time adjustments to prevent application disruption while maintaining precision.
+
+## Features
+
+- Automatic convergence detection (within 0.5ms)
+- Timeout protection (30 seconds max)
+- Adaptive correction intervals
+- Server coherence validation
+- Drift detection and warnings
+
+## Configuration
+
+### 1. Convergence Detection
+The correction system ensures convergence within 0.5ms precision:
+
+```javascript
+// Automatic convergence detection
+timeSync.on('correctionComplete', (data) => {
+    if (data.converged) {
+        console.log(`Perfect convergence: ${data.finalOffset}ms`);
+    }
+});
+```
+
+### 2. Server Coherence Validation
+Automatically tests multiple NTP servers and detects anomalies:
+
+```javascript
+await timeSync.sync({ coherenceValidation: true });
+
+timeSync.on('coherenceWarning', (data) => {
+    console.log(`Variance between servers: ${data.variance}ms`);
+    console.log('Servers:', data.servers);
+});
+```
+
+### 3. Drift Detection
+Monitors system clock drift and warns when re-sync is needed:
+
+```javascript
+timeSync.on('driftWarning', (data) => {
+    const hours = (data.elapsed / 3600000).toFixed(1);
+    console.log(`Clock has been running for ${hours} hours without sync`);
+});
+```
+
+### 4. Timeout Protection
+Prevents infinite correction loops with automatic timeout:
+
+```javascript
+// Correction automatically times out after 30 seconds
+timeSync.on('correctionComplete', (data) => {
+    if (data.timeout) {
+        console.log('Correction timed out, applied final offset');
+    }
+});
+```
+
+### 5. Adaptive Intervals
+Correction intervals automatically adjust based on offset size for optimal performance.
 
 ## The Time Jump Problem
 
@@ -22,15 +83,15 @@ await timeSync.sync(); // System is 3 seconds behind
 ```
 
 **Real-world consequences:**
-- ⚠️ `setTimeout()` and `setInterval()` behave erratically
-- ⚠️ Performance measurements show negative durations
-- ⚠️ Database timestamps become inconsistent
-- ⚠️ Real-time games and animations stutter
-- ⚠️ Monitoring systems show false spikes
+- `setTimeout()` and `setInterval()` behave erratically
+- Performance measurements show negative durations
+- Database timestamps become inconsistent
+- Real-time games and animations stutter
+- Monitoring systems show false spikes
 
 ## The Solution: Gradual Correction
 
-Smooth correction gradually adjusts time over multiple sync cycles instead of making instant jumps.
+Smooth correction gradually adjusts time over multiple sync cycles with convergence detection and server validation.
 
 ### Basic Setup
 
@@ -46,186 +107,12 @@ timeSync.setSmoothCorrection(true, {
 
 await timeSync.sync();
 timeSync.startAutoSync(300000); // Auto-sync every 5 minutes
-```
 
-### How It Works
-
-**Example: System is 3 seconds behind**
-
-Without smooth correction:
-```
-Sync 1: +3000ms instant jump ⚡ (jarring!)
-```
-
-With smooth correction (10% rate):
-```
-Sync 1: +300ms (10% of 3000ms)
-Sync 2: +270ms (10% of remaining 2700ms)  
-Sync 3: +243ms (10% of remaining 2430ms)
-...
-Total: Gradually corrects over ~10 sync cycles 🌊
-```
-
-## Configuration Options
-
-### `maxCorrectionJump` (Default: 1000ms)
-Maximum instant correction allowed before switching to gradual mode.
-
-```javascript
-// Small jumps allowed, good for real-time apps
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 500  // Only allow 0.5s instant jumps
+// Listen for completion events
+timeSync.on('correctionComplete', (data) => {
+    console.log(`Correction completed: ${data.finalOffset}ms`);
+    if (data.converged) console.log('Perfect convergence achieved');
 });
-
-// Larger jumps allowed, faster correction
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 2000  // Allow 2s instant jumps
-});
-```
-
-### `correctionRate` (Default: 0.1)
-How much of the offset to correct per sync cycle (0.0 to 1.0).
-
-```javascript
-// Slow, gentle correction
-timeSync.setSmoothCorrection(true, {
-    correctionRate: 0.05  // 5% per cycle (20 cycles to correct)
-});
-
-// Fast correction
-timeSync.setSmoothCorrection(true, {
-    correctionRate: 0.2   // 20% per cycle (5 cycles to correct)
-});
-```
-
-### `maxOffsetThreshold` (Default: 10000ms)
-Force instant correction if offset exceeds this value.
-
-```javascript
-// Force correction sooner
-timeSync.setSmoothCorrection(true, {
-    maxOffsetThreshold: 3000  // Force instant if >3s off
-});
-
-// Allow larger gradual corrections  
-timeSync.setSmoothCorrection(true, {
-    maxOffsetThreshold: 30000  // Force instant only if >30s off
-});
-```
-
-## Production Configurations
-
-### High-Precision Applications
-For trading, monitoring, or real-time systems:
-
-```javascript
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 100,      // Very small instant jumps
-    correctionRate: 0.05,        // Gentle 5% correction
-    maxOffsetThreshold: 1000     // Force correction at 1s
-});
-
-// Sync frequently to minimize drift
-timeSync.startAutoSync(60000); // Every minute
-```
-
-### General Web Applications
-For typical web apps and APIs:
-
-```javascript
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,     // 1s instant jumps OK
-    correctionRate: 0.1,         // 10% correction
-    maxOffsetThreshold: 5000     // Force at 5s
-});
-
-// Normal sync frequency
-timeSync.startAutoSync(300000); // Every 5 minutes
-```
-
-### Background Services
-For logging, cron jobs, or batch processing:
-
-```javascript
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 2000,     // 2s jumps acceptable
-    correctionRate: 0.2,         // Faster 20% correction
-    maxOffsetThreshold: 10000    // Force at 10s
-});
-
-// Less frequent sync
-timeSync.startAutoSync(600000); // Every 10 minutes
-```
-
-## Monitoring Smooth Correction
-
-### Track Correction Progress
-
-```javascript
-timeSync.on('sync', (data) => {
-    console.log(`Server: ${data.server}`);
-    console.log(`Offset before: ${data.offsetBefore}ms`);
-    console.log(`Offset after: ${data.offsetAfter}ms`);
-    console.log(`Correction applied: ${data.correctionApplied}ms`);
-    console.log(`Smooth mode: ${data.smoothMode ? 'ON' : 'OFF'}`);
-});
-```
-
-### Debug Correction Behavior
-
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Enable detailed logging
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,
-    correctionRate: 0.1,
-    maxOffsetThreshold: 5000,
-    debug: true  // Log correction decisions
-});
-
-await timeSync.sync();
-```
-
-## Disabling Smooth Correction
-
-For testing or when you want instant corrections:
-
-```javascript
-// Disable smooth correction (default behavior)
-timeSync.setSmoothCorrection(false);
-
-// Or completely skip the call
-// timeSync.setSmoothCorrection() not called = disabled
-```
-
-## Best Practices
-
-### ✅ Enable for Production
-Always enable smooth correction in production to prevent time jump issues.
-
-### ✅ Tune for Your Use Case
-- **Real-time apps**: Small jumps, slow correction
-- **Background services**: Larger jumps, faster correction
-- **High-precision**: Frequent sync, minimal jumps
-
-### ✅ Monitor Offset
-Watch the offset values to tune your configuration:
-
-```javascript
-setInterval(() => {
-    const offset = timeSync.offset();
-    if (Math.abs(offset) > 1000) {
-        console.warn(`Large offset detected: ${offset}ms`);
-    }
-}, 60000);
-```
-
-### ✅ Test Edge Cases
-Test your application with simulated large time offsets to ensure smooth correction works as expected.
-
-Smooth correction ensures your application maintains stable, monotonic time even when system clocks drift significantly! 🎯
-}, 1000);
 ```
 
 ### How It Works
@@ -351,56 +238,182 @@ timeSync.setSmoothCorrection(true, {
 
 // With emergency fallback
 setTimeout(() => {
-  if (Math.abs(timeSync.offset()) > 10000) {
-    console.warn('⚠️ Critical offset detected, forcing correction');
-    timeSync.forceCorrection();
-  }
-}, 60000);
-```
+## Monitoring and Best Practices
 
-Smooth correction transforms your application from a system with annoying time jumps to one with fluid and predictable time! 🎯
-
-## ❓ FAQ : Pourquoi l'Offset Reste Constant ?
-
-### C'est Normal ! Voici Pourquoi
-
-L'offset constant (ex: 40ms) n'est **PAS un problème**, c'est le fonctionnement normal :
+### Event-Driven Monitoring
 
 ```javascript
-// Exemple typique
+// Comprehensive monitoring setup
+timeSync.on('sync', (data) => {
+    console.log(`✅ Synced with ${data.server}`);
+    console.log(`📊 Offset: ${data.offset}ms`);
+    if (data.coherenceVariance) {
+        console.log(`🔍 Server variance: ${data.coherenceVariance}ms`);
+    }
+});
+
+timeSync.on('coherenceWarning', (data) => {
+    // Log warning and potentially alert administrators
+    console.warn(`⚠️ NTP servers variance: ${data.variance}ms`);
+    console.warn('Servers tested:', data.servers);
+    
+    // Consider switching to backup servers if variance is too high
+    if (data.variance > 500) {
+        console.error('🚨 Critical NTP variance detected!');
+    }
+});
+
+timeSync.on('driftWarning', (data) => {
+    const hours = (data.elapsed / 3600000).toFixed(1);
+    console.warn(`⏰ Clock drift: ${hours}h without sync`);
+    
+    // Trigger immediate re-sync
+    timeSync.sync().catch(console.error);
+});
+
+timeSync.on('correctionComplete', (data) => {
+    console.log(`🎯 Correction completed: ${data.finalOffset}ms`);
+    if (data.timeout) {
+        console.warn('⚠️ Correction timed out');
+    }
+    if (data.converged) {
+        console.log('Perfect convergence achieved');
+    }
+});
+```
+
+### Health Check Function
+
+```javascript
+function checkTimeSyncHealth() {
+    const stats = timeSync.stats();
+    
+    const health = {
+        synchronized: stats.synchronized,
+        offset: stats.offset,
+        correctedOffset: stats.correctedOffset,
+        correctionInProgress: stats.correctionInProgress,
+        uptime: stats.uptime,
+        // Advanced metrics
+        serverCoherence: stats.serverOffsets ? 
+            Object.keys(stats.serverOffsets).length > 1 : false,
+        lastSyncAge: Date.now() - (stats.lastSync?.getTime() || 0),
+        
+        // Health indicators
+        status: 'healthy'
+    };
+    
+    // Determine health status
+    if (!health.synchronized) {
+        health.status = 'critical';
+        health.issue = 'Not synchronized';
+    } else if (health.lastSyncAge > 3600000) { // > 1 hour
+        health.status = 'warning';
+        health.issue = 'Sync too old';
+    } else if (Math.abs(health.offset) > 1000) { // > 1 second
+        health.status = 'warning';
+        health.issue = 'High offset';
+    }
+    
+    return health;
+}
+
+// Use in monitoring
+setInterval(() => {
+    const health = checkTimeSyncHealth();
+    if (health.status !== 'healthy') {
+        console.warn('TimeSync Health Issue:', health);
+    }
+}, 60000); // Check every minute
+```
+
+### Robust Error Handling
+
+```javascript
+// Comprehensive error handling
+async function robustTimeSync() {
+    const maxRetries = 3;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await timeSync.sync({
+                coherenceValidation: true,
+                timeout: 5000
+            });
+            
+            console.log(`✅ Sync successful on attempt ${attempt}`);
+            return;
+            
+        } catch (error) {
+            lastError = error;
+            console.warn(`❌ Sync attempt ${attempt} failed: ${error.message}`);
+            
+            if (attempt < maxRetries) {
+                const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+                console.log(`⏳ Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    
+    // All attempts failed
+    console.error(`🚨 All sync attempts failed. Last error: ${lastError.message}`);
+    
+    // Fallback: disable coherence validation and try once more
+    try {
+        await timeSync.sync({ coherenceValidation: false });
+        console.log('✅ Fallback sync successful (coherence validation disabled)');
+    } catch (error) {
+        console.error('🚨 Even fallback sync failed:', error.message);
+        throw error;
+    }
+}
+```
+
+Smooth correction transforms your application from a system with jarring time jumps to one with fluid and predictable time behavior! 🎯
+
+## ❓ FAQ: Why Does the Offset Stay Constant?
+
+### This is Normal! Here's Why
+
+A constant offset (e.g., 40ms) is **NOT a problem** - it's normal behavior:
+
+```javascript
+// Typical example
 await timeSync.sync();
 console.log(timeSync.offset()); // 42ms
-// ... 5 minutes plus tard ...
-console.log(timeSync.offset()); // 42ms (toujours pareil)
+// ... 5 minutes later ...
+console.log(timeSync.offset()); // 42ms (still the same)
 ```
 
-### Explication Technique
+### Technical Explanation
 
-L'**offset** représente la **différence constante** entre :
-- L'horloge de votre ordinateur (qui peut être légèrement décalée)
-- L'heure précise du serveur NTP
+The **offset** represents the **constant difference** between:
+- Your computer's clock (which may be slightly off)
+- The precise time from the NTP server
 
 ```javascript
-// Formule simplifiée :
-const offset = heureServeurNTP - heureOrdinateur;
-// Si votre PC est en retard de 40ms : offset = +40ms
-// Si votre PC est en avance de 40ms : offset = -40ms
+// Simplified formula:
+const offset = ntpServerTime - computerTime;
+// If your PC is 40ms behind: offset = +40ms
+// If your PC is 40ms ahead: offset = -40ms
 ```
 
-### Pourquoi l'Offset Ne Change Pas
+### Why the Offset Doesn't Change
 
-1. **Horloge système stable** : Votre ordinateur maintient un rythme régulier
-2. **Décalage fixe** : La différence avec le serveur NTP reste constante
-3. **Précision** : C'est exactement ce qu'on veut !
+1. **Stable system clock**: Your computer maintains a regular rhythm
+2. **Fixed difference**: The difference with the NTP server remains constant
+3. **Precision**: This is exactly what we want!
 
 ```javascript
-// Temps réel :
-// 14:30:00.000 (serveur NTP)
-// 14:29:59.960 (votre PC) → offset = +40ms
+// Real time example:
+// 14:30:00.000 (NTP server)
+// 14:29:59.960 (your PC) → offset = +40ms
 
-// 5 minutes plus tard :
-// 14:35:00.000 (serveur NTP)  
-// 14:34:59.960 (votre PC) → offset = +40ms (toujours!)
+// 5 minutes later:
+// 14:35:00.000 (NTP server)
+// 14:34:59.960 (your PC) → offset = +40ms (still the same!)
 ```
 
 ### Quand l'Offset Doit-il Changer ?

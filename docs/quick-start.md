@@ -42,15 +42,34 @@ setInterval(() => {
 ```javascript
 const timeSync = require('precise-time-ntp');
 
-// Use specific NTP servers
+// Use specific NTP servers with validation
 await timeSync.sync({
     servers: ['time.cloudflare.com', 'time.google.com'],
-    timeout: 5000,    // 5s timeout per server
-    retries: 3,       // Retry 3 times if failed
-    samples: 4        // Take 4 samples for accuracy
+    timeout: 5000,            // 5s timeout per server
+    retries: 3,               // Retry 3 times if failed
+    samples: 4,               // Take 4 samples for accuracy
+    coherenceValidation: true // Validate server consistency (recommended)
 });
 
-console.log('Synced with custom servers');
+console.log('Synced with validated servers');
+```
+
+## Production Setup
+
+```javascript
+const timeSync = require('precise-time-ntp');
+
+// Complete production configuration
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 500,      // Max 0.5s instant jump
+    correctionRate: 0.1,         // 10% gradual correction
+    maxOffsetThreshold: 3000     // Force correction at 3s
+});
+
+await timeSync.sync({ coherenceValidation: true });
+timeSync.startAutoSync(300000);
+
+console.log('Production time sync active!');
 ```
 
 ## Real-time Web Clock
@@ -86,22 +105,6 @@ console.log('⏰ Time server running at ws://localhost:8080');
     </script>
 </body>
 </html>
-```
-
-## Smooth Time Correction
-
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Prevent jarring time jumps (recommended for production)
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,     // Max 1s instant correction
-    correctionRate: 0.1,         // 10% gradual correction rate
-    maxOffsetThreshold: 5000     // Force instant if >5s off
-});
-
-await timeSync.sync();
-timeSync.startAutoSync(300000);
 ```
 
 ## Events & Error Handling
