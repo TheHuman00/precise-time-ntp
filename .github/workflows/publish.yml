@@ -3,14 +3,19 @@ name: Publish to NPM & GitHub Packages
 on:
   workflow_dispatch:
     inputs:
-      version:
+      version_type:
         description: 'Version type'
-        required: true
+        required: false
         type: choice
         options:
           - patch
           - minor
           - major
+        default: 'patch'
+      custom_version:
+        description: 'Custom version - overrides version type'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -37,7 +42,12 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
       
-      - run: npm version ${{ github.event.inputs.version }}
+      - run: |
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+            npm version ${{ github.event.inputs.custom_version }}
+          else
+            npm version ${{ github.event.inputs.version_type }}
+          fi
       
       # Publish to npm
       - run: npm publish
