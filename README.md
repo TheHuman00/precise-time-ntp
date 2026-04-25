@@ -112,7 +112,7 @@ timeSync.forceCorrection();
 ## Utilities
 
 ```javascript
-// Format a date
+// Format current NTP time (pass null as first argument to use NTP time)
 timeSync.format(null, 'iso')              // "2026-04-25T15:30:45.123Z"
 timeSync.format(null, 'locale')           // system locale, e.g. "25/04/2026, 17:30:45"
 timeSync.format(null, 'locale', 'en-US') // "4/25/2026, 5:30:45 PM"
@@ -120,6 +120,10 @@ timeSync.format(null, 'utc')             // "Sat, 25 Apr 2026 15:30:45 GMT"
 timeSync.format(null, 'date')            // date only
 timeSync.format(null, 'time')            // time only
 timeSync.format(null, 'timestamp')       // Unix timestamp as string
+
+// Format a specific date
+timeSync.format('2026-01-01', 'iso')     // "2026-01-01T00:00:00.000Z"
+timeSync.format(new Date(), 'locale')    // any Date object works too
 
 // Difference between two dates (ms)
 timeSync.diff('2026-01-01', timeSync.now()) // e.g. 9849600000
