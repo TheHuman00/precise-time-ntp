@@ -1,42 +1,57 @@
-# 📚 precise-time-ntp Documentation
+# precise-time-ntp — Documentation
 
-## 🚀 Getting Started
+Your system clock drifts. By the time you're reading this, it's probably a few hundred milliseconds off. For most apps that doesn't matter — but for logs, financial transactions, real-time sync, or anything where timestamps need to be trusted, it absolutely does.
 
-- **[Quick Start Guide](quick-start.md)** - Get up and running in 5 minutes
-- **[Complete API Reference](api-reference.md)** - All methods and configuration options
-- **[WebSocket Integration](websocket-guide.md)** - Real-time HTML clocks with step-by-step examples
-- **[FAQ](faq.md)** - Common questions and troubleshooting
+`precise-time-ntp` fixes that. It queries NTP servers, compensates for network latency, and gives you a `Date` you can actually rely on.
 
-## ⚡ Advanced Features
+---
 
-- **[Smooth Correction](smooth-correction.md)** - Avoid jarring time jumps with gradual adjustments
+## Where to start
 
-## 💡 Example Use Cases
+**New here?** → [Quick Start](quick-start.md) — syncing in 2 minutes, production config in 5.
 
-| Use Case | Description |
-|----------|-------------|
-| **Real-time web apps** | Synchronized clocks and timers in browsers |
-| **Logging systems** | Precise timestamps for events and debugging |
-| **Performance monitoring** | Accurate time measurements and benchmarks |
-| **Gaming applications** | Synchronized game timers and events |
-| **Financial systems** | Precise transaction timestamps |
+**Looking for a specific method?** → [API Reference](api-reference.md) — every option, return value, and event documented.
 
-## 🏃‍♂️ Quick Test Drive
+**Building a live HTML clock?** → [WebSocket Guide](websocket-guide.md) — server + client code, copy-paste ready.
 
-Try these examples from your project root:
+**Smooth correction confusing you?** → [Smooth Correction](smooth-correction.md) — what it is, why it matters, how to tune it.
+
+**Something not working?** → [FAQ](faq.md) — offset not changing, sync failing, common gotchas.
+
+---
+
+## Try it right now
 
 ```bash
-# Basic synchronization
-npm run basic
-
-# WebSocket HTML clock  
-npm run websocket
-# Then open examples/clock.html in your browser
-
-# Auto-sync example
-npm run auto-sync
+npm install precise-time-ntp
 ```
 
-## 📖 Full Documentation
+```javascript
+const timeSync = require('precise-time-ntp');
 
-For the complete API documentation and advanced usage patterns, see the individual guides above.
+await timeSync.sync();
+console.log(timeSync.now());    // precise Date — not your system clock's guess
+console.log(timeSync.offset()); // ms — how far off your system was
+```
+
+---
+
+## What it's useful for
+
+- **Logging** — timestamps that match across machines and time zones
+- **Performance measurement** — benchmarks that aren't skewed by drift
+- **Real-time apps** — synchronized clocks in browsers via WebSocket
+- **Financial or audit systems** — transactions with verifiable timestamps
+- **Distributed systems** — consistent time across nodes without NTP config per server
+
+---
+
+## Run the examples
+
+From your project root:
+
+```bash
+npm run basic        # sync and print the time
+npm run auto-sync    # keep syncing every 5 minutes
+npm run websocket    # start a time server, then open examples/clock.html
+```

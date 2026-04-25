@@ -57,9 +57,9 @@ const t = new TimeSync({
 
     // Smooth correction (see section below)
     smoothCorrection: true,
-    maxCorrectionJump: 1000,
-    correctionRate: 0.1,
-    maxOffsetThreshold: 5000,
+    maxCorrectionJump: 1000,  // ms — apply instantly if diff is under this
+    correctionRate: 0.1,      // fraction per sync cycle (0.1 = 10%)
+    maxOffsetThreshold: 5000, // ms — always apply instantly if diff exceeds this
 
     locale: 'fr-FR',           // used by format() — defaults to system locale
 });
@@ -83,7 +83,7 @@ The default global instance uses `pool.ntp.org`, `time.google.com`, and `time.cl
 
 ```javascript
 await timeSync.sync();
-timeSync.startAutoSync(300000); // re-sync every 5 minutes
+timeSync.startAutoSync(300000); // ms — re-sync every 5 minutes
 ```
 
 Or enable it at construction: `new TimeSync({ autoSync: true, autoSyncInterval: 300000 })`.
@@ -98,9 +98,9 @@ By default, if your clock is off by 500ms and you re-sync, it jumps 500ms instan
 
 ```javascript
 timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,  // apply instantly if diff is under 1s
-    correctionRate: 0.1,      // otherwise, fix 10% per sync cycle
-    maxOffsetThreshold: 5000  // always apply instantly if diff > 5s
+    maxCorrectionJump: 1000,  // ms — apply instantly if diff is under 1s
+    correctionRate: 0.1,      // fraction per sync cycle (0.1 = 10%)
+    maxOffsetThreshold: 5000  // ms — always apply instantly if diff > 5s
 });
 
 // If you can't wait for the gradual correction to finish:
@@ -125,8 +125,8 @@ timeSync.format(null, 'timestamp')       // Unix timestamp as string
 timeSync.format('2026-01-01', 'iso')     // "2026-01-01T00:00:00.000Z"
 timeSync.format(new Date(), 'locale')    // any Date object works too
 
-// Difference between two dates (ms)
-timeSync.diff('2026-01-01', timeSync.now()) // e.g. 9849600000
+// Difference between two dates — returns ms
+timeSync.diff('2026-01-01', timeSync.now()) // e.g. 9849600000 ms
 
 // console.log with NTP timestamp prefix
 timeSync.log('order processed')
@@ -200,9 +200,9 @@ timeSync.on('correctionComplete', (data) => {
 const s = timeSync.stats();
 
 s.synchronized         // true/false
-s.offset               // current system clock error (ms)
-s.rtt                  // last network round-trip time (ms)
-s.correctedOffset      // offset currently being applied
+s.offset               // ms — current system clock error
+s.rtt                  // ms — last network round-trip time
+s.correctedOffset      // ms — offset currently being applied
 s.correctionInProgress // true while smooth correction is running
 s.lastSync             // Date of last successful sync
 s.uptime               // ms since last sync
@@ -220,14 +220,14 @@ s.uptime               // ms since last sync
 | `offset()` | System clock error in ms |
 | `isSynchronized()` | Returns `true` if synced (no throw) |
 | `stats()` | Full sync diagnostics |
-| `startAutoSync(ms)` | Re-sync on an interval |
+| `startAutoSync(interval)` | Re-sync on an interval (interval in ms) |
 | `stopAutoSync()` | Stop auto-sync |
 | `setSmoothCorrection(bool, options?)` | Configure gradual correction |
 | `forceCorrection()` | Apply pending correction immediately |
 | `startWebSocketServer(port)` | Broadcast time over WebSocket |
 | `stopWebSocketServer()` | Stop WebSocket server |
 | `format(date?, format?, locale?)` | Format a date (`iso`, `locale`, `utc`, `date`, `time`, `timestamp`) |
-| `diff(date1, date2?)` | Difference between two dates in ms |
+| `diff(date1, date2?)` | Difference between two dates — returns ms |
 | `log(message)` | `console.log` with NTP timestamp prefix |
 
 Full option reference: [docs/api-reference.md](docs/api-reference.md)
