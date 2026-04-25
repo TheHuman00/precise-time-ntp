@@ -38,6 +38,7 @@ timeSync.offset()     // how far off your system clock is, in ms
 ---
 
 ## Configuration
+[See the 📖 Documentation](https://github.com/TheHuman00/precise-time-ntp/tree/main/docs)
 
 All options can be set at construction time or overridden per `sync()` call.
 
