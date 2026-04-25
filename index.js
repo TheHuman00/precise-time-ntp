@@ -1,6 +1,16 @@
-const ntpClient = require("ntp-client");
+const dgram = require("dgram");
 const WebSocket = require("ws");
 const EventEmitter = require("events");
+
+// NTP epoch starts Jan 1, 1900; Unix epoch starts Jan 1, 1970 (70 years = 2208988800s)
+const NTP_DELTA_MS = 2208988800000;
+
+function readNtpTimestamp(buf, pos) {
+  let intpart = 0, fractpart = 0;
+  for (let i = 0; i < 4; i++) intpart = (intpart * 256) + buf[pos + i];
+  for (let i = 4; i < 8; i++) fractpart = (fractpart * 256) + buf[pos + i];
+  return intpart * 1000 + Math.round((fractpart * 1000) / 0x100000000) - NTP_DELTA_MS;
+}
 
 /**
  * TimeSync - Class for precise time synchronization
@@ -15,6 +25,7 @@ class TimeSync extends EventEmitter {
     this.lastSyncTime = null;
     this.systemOffset = 0;
     this.syncDate = null;
+    this.lastRtt = null;
     
     // Smooth correction
     this.targetOffset = 0;           // Target offset to reach
@@ -33,6 +44,7 @@ class TimeSync extends EventEmitter {
       retries: 3,
       autoSync: false,
       autoSyncInterval: 300000, // 5 minutes
+      locale: undefined,        // undefined = system locale
       // New options for smooth correction
       smoothCorrection: true,        // Enable smooth correction
       maxCorrectionJump: 1000,      // Max brutal correction (1s)
@@ -87,19 +99,20 @@ class TimeSync extends EventEmitter {
     
     for (const server of serversToTest) {
       try {
-        const ntpTime = await this.getNtpTime(server, config.timeout);
-        const systemTime = Date.now();
-        const newOffset = ntpTime.getTime() - systemTime;
-        
+        const { offset: newOffset, rtt } = await this.getNtpTime(server, config.timeout);
+
         serverResults.push({
           server,
           offset: newOffset,
-          ntpTime,
-          systemTime
+          rtt,
+          ntpTime: new Date(Date.now() + newOffset),
+          systemTime: Date.now()
         });
         
       } catch (error) {
-        this.emit('error', { server, error });
+        const ntpError = new Error(`[${server}] ${error.message}`);
+        ntpError.server = server;
+        this.emit('error', ntpError);
         continue; // Try next server
       }
     }
@@ -154,17 +167,19 @@ class TimeSync extends EventEmitter {
     this.isSync = true;
     this.lastSyncTime = performance.now();
     this.syncDate = new Date();
-    
+    this.lastRtt = selectedResult.rtt;
+
     const result = {
       server: selectedResult.server,
       offset: this.systemOffset,
+      rtt: selectedResult.rtt,
       correctedOffset: this.currentOffset,
       time: selectedResult.ntpTime,
       systemTime: new Date(selectedResult.systemTime),
       gradualCorrection: this.correctionInProgress,
       offsetDiff: isFirstSync ? 0 : offsetDiff,
       serverResults: serverResults.length > 1 ? serverResults : undefined,
-      coherenceVariance: serverResults.length > 1 ? 
+      coherenceVariance: serverResults.length > 1 ?
         Math.max(...serverResults.map(r => r.offset)) - Math.min(...serverResults.map(r => r.offset)) : 0
     };
     
@@ -179,22 +194,49 @@ class TimeSync extends EventEmitter {
   }
 
   /**
-   * Gets NTP time from a server
+   * Queries an NTP server and returns offset + RTT using the 4-timestamp algorithm.
+   * offset = ((t2 - t1) + (t3 - t4)) / 2  — compensates for network latency
+   * rtt    = (t4 - t1) - (t3 - t2)
    * @private
    */
   getNtpTime(server, timeout = 5000) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`Timeout after ${timeout}ms`));
-      }, timeout);
-      
-      ntpClient.getNetworkTime(server, 123, (err, date) => {
+      const client = dgram.createSocket("udp4");
+      const packet = Buffer.alloc(48);
+      packet[0] = 0x1B; // LI=0, VN=3, Mode=3 (client)
+
+      let done = false;
+      const finish = (err, result) => {
+        if (done) return;
+        done = true;
         clearTimeout(timer);
-        if (err) {
-          reject(new Error(`NTP error: ${err.message}`));
-        } else {
-          resolve(date);
-        }
+        try { client.close(); } catch (_) {}
+        err ? reject(err) : resolve(result);
+      };
+
+      const timer = setTimeout(
+        () => finish(new Error(`Timeout after ${timeout}ms`)),
+        timeout
+      );
+
+      client.on("error", (err) => finish(err));
+
+      const t1 = Date.now();
+      client.send(packet, 0, 48, 123, server, (err) => {
+        if (err) return finish(err);
+
+        client.once("message", (msg) => {
+          const t4 = Date.now();
+          if (msg.length < 48) return finish(new Error("Invalid NTP response"));
+
+          const t2 = readNtpTimestamp(msg, 32); // server receive timestamp
+          const t3 = readNtpTimestamp(msg, 40); // server transmit timestamp
+
+          const offset = Math.round(((t2 - t1) + (t3 - t4)) / 2);
+          const rtt = (t4 - t1) - (t3 - t2);
+
+          finish(null, { offset, rtt });
+        });
       });
     });
   }
@@ -219,12 +261,8 @@ class TimeSync extends EventEmitter {
     
     // Use gradually corrected offset if available
     const activeOffset = this.correctionInProgress ? this.currentOffset : this.systemOffset;
-    
-    // More precise calculation avoiding error accumulation
-    const baseTime = this.syncDate.getTime();
-    const adjustedTime = baseTime + elapsed + activeOffset;
-    
-    return new Date(adjustedTime);
+
+    return new Date(Date.now() + activeOffset);
   }
 
   /**
@@ -262,6 +300,7 @@ class TimeSync extends EventEmitter {
       synchronized: this.isSync,
       lastSync: this.syncDate,
       offset: this.systemOffset,
+      rtt: this.lastRtt,
       correctedOffset: this.currentOffset,
       targetOffset: this.targetOffset,
       correctionInProgress: this.correctionInProgress,
@@ -450,22 +489,23 @@ class TimeSync extends EventEmitter {
    * @param {string} format - Output format
    * @returns {string}
    */
-  format(date = null, format = 'iso') {
+  format(date = null, format = 'iso', locale = undefined) {
     const time = date ? new Date(date) : this.now();
-    
+    const loc = locale ?? this.config.locale;
+
     switch (format) {
       case 'iso':
         return time.toISOString();
       case 'locale':
-        return time.toLocaleString('en-US');
+        return time.toLocaleString(loc);
       case 'timestamp':
         return time.getTime().toString();
       case 'utc':
         return time.toUTCString();
       case 'date':
-        return time.toLocaleDateString('en-US');
+        return time.toLocaleDateString(loc);
       case 'time':
-        return time.toLocaleTimeString('en-US');
+        return time.toLocaleTimeString(loc);
       default:
         return time.toString();
     }
@@ -612,7 +652,7 @@ const api = {
   stopWebSocketServer: () => timeSync.stopWebSocketServer(),
   
   // Utilities
-  format: (date, format) => timeSync.format(date, format),
+  format: (date, format, locale) => timeSync.format(date, format, locale),
   diff: (date1, date2) => timeSync.diff(date1, date2),
   log: (message) => timeSync.log(message),
   

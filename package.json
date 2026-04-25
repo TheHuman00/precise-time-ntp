@@ -48,7 +48,6 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "ntp-client": "^0.5.3",
     "ws": "^8.17.0"
   }
 }

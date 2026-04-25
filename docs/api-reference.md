@@ -15,9 +15,7 @@ await timeSync.sync();
 // Advanced configuration
 await timeSync.sync({
     servers: ['time.cloudflare.com', 'time.google.com'],
-    timeout: 5000,           // Timeout per server (ms)
-    retries: 3,              // Retry attempts per server
-    samples: 4,              // Number of samples for accuracy
+    timeout: 5000,            // Timeout per server (ms)
     coherenceValidation: true // Test multiple servers for consistency
 });
 ```
@@ -124,14 +122,14 @@ Emitted after successful synchronization.
 timeSync.on('sync', (data) => {
     console.log(`✅ Synced with ${data.server}`);
     console.log(`Offset: ${data.offset}ms`);
-    console.log(`Round-trip: ${data.roundTrip}ms`);
+    console.log(`RTT: ${data.rtt}ms`);
 });
 ```
 
 **Event Data:**
 - `server` - NTP server used for sync
 - `offset` - Clock offset in milliseconds
-- `roundTrip` - Network round-trip time
+- `rtt` - Network round-trip time in milliseconds
 
 ### `error`
 Emitted when synchronization fails.
@@ -230,14 +228,16 @@ timeSync.stopWebSocketServer();
 
 ## Utilities
 
-### `format(date, format)`
-Formats a date/time.
+### `format(date, format, locale?)`
+Formats a date/time. `locale` defaults to the system locale or the `locale` option set in the constructor.
 
 ```javascript
-timeSync.format(null, 'locale');     // "12/30/2024, 3:30:45 PM"
-timeSync.format(null, 'iso');        // "2024-12-30T15:30:45.123Z"
-timeSync.format(null, 'time');       // "3:30:45 PM"
-timeSync.format(null, 'date');       // "12/30/2024"
+timeSync.format(null, 'locale');             // system locale, e.g. "25/04/2026, 17:30:45"
+timeSync.format(null, 'locale', 'en-US');   // "4/25/2026, 5:30:45 PM"
+timeSync.format(null, 'locale', 'fr-FR');   // "25/04/2026, 17:30:45"
+timeSync.format(null, 'iso');               // "2026-04-25T15:30:45.123Z"
+timeSync.format(null, 'time');              // local time string
+timeSync.format(null, 'date');              // local date string
 ```
 
 ### `diff(date1, date2)`
@@ -280,6 +280,7 @@ console.log('Correction rate:', stats.config.correctionRate);
 **Returns:**
 - `synchronized` (boolean) - Whether time has been synced
 - `offset` (number) - Current system time offset in milliseconds
+- `rtt` (number) - Last measured network round-trip time in milliseconds
 - `correctedOffset` (number) - Currently applied offset (with smooth correction)
 - `targetOffset` (number) - Target offset for smooth correction
 - `lastSync` (Date) - Timestamp of last successful sync
@@ -296,6 +297,7 @@ Emitted after each successful synchronization.
 timeSync.on('sync', (data) => {
     console.log(`Sync with ${data.server}`);
     console.log(`Offset: ${data.offset}ms`);
+    console.log(`RTT: ${data.rtt}ms`);
 });
 ```
 
@@ -354,7 +356,6 @@ timeSync.on('driftWarning', (data) => {
 await timeSync.sync({
     servers: ['custom.ntp.server'],
     timeout: 10000,             // Timeout per server (ms)
-    retries: 5,                 // Number of attempts
     coherenceValidation: true,  // Validate server consistency
     autoSync: true,             // Auto-sync after sync
     autoSyncInterval: 600000,   // Auto-sync interval (ms)

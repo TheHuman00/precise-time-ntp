@@ -240,6 +240,7 @@ console.log(stats);
   synchronized: true,              // Sync status
   lastSync: 2025-07-06T19:18:27.130Z,  // Last sync time
   offset: -10,                     // Real system offset (ms)
+  rtt: 47,                         // Last network round-trip time (ms)
   correctedOffset: -10,            // Currently applied offset (ms)
   targetOffset: -10,               // Target for smooth correction (ms)
   correctionInProgress: false,     // Whether correction is active
