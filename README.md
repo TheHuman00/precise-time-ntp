@@ -1,6 +1,4 @@
-# ⏰ precise-time-ntp
-
-**The ultimate time synchronization library for Node.js applications**
+# precise-time-ntp
 
 <div align="center">
 
@@ -9,321 +7,239 @@
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-precise--time--ntp-black?style=for-the-badge&logo=github)](https://github.com/TheHuman00/precise-time-ntp)
 
-**🚀 Sync with atomic clocks • Smooth correction • Server validation**
-
 </div>
 
----
+Sync your Node.js app with NTP servers and get the real time — not whatever your system clock thinks it is.
 
-## 🎯 What makes precise-time-ntp special?
-
-✅ **Atomic Precision** - Sync with global NTP servers  
-✅ **Smart System Drift Correction** - Automatically compensates for clock drift over time  
-✅ **Network Latency Compensation** - Accounts for network delays in time calculations  
-✅ **Server Coherence Validation** - Validates consistency across multiple NTP servers  
-✅ **Smooth Time Correction** - Prevents jarring time jumps in applications  
-✅ **Universal Compatibility** - Works in Node.js backend + HTML frontend  
-✅ **Zero Configuration** - Works out of the box with intelligent defaults  
-✅ **Production Hardened** - Automatic failover, error handling, reconnection logic  
-✅ **Blazing Fast** - Under 50KB, optimized for performance  
+Your system clock drifts. Servers disagree. `Date.now()` lies. This library fixes that with a proper 4-timestamp NTP implementation that compensates for network latency, validates server consistency, and corrects drift gradually without breaking your running timers.
 
 ---
 
-## ⚡ Quick Start
+## Install
 
 ```bash
 npm install precise-time-ntp
 ```
 
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Sync with atomic time (automatically handles system drift)
-await timeSync.sync();
-
-// Get precise time - accurate to the millisecond
-console.log('Precise time:', timeSync.now());
-console.log('System is off by:', timeSync.offset(), 'ms');
-
-// Keep your app synchronized automatically
-timeSync.startAutoSync(300000); // Re-sync every 5 minutes
-```
-
-**🎉 That's it!** Your app now uses atomic time with automatic drift correction.
-
 ---
 
-## Advanced Features
-
-### Server Validation
-Automatically test multiple NTP servers for better reliability:
-
-```javascript
-// Enable server validation (detects unreliable/inaccurate servers)
-await timeSync.sync({ coherenceValidation: true });
-```
-
-### Smooth Time Correction
-Prevent jarring time jumps in your applications:
-
-```javascript
-// Gradually adjust time instead of instant jumps (prevents breaking timers)
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,     // Max 1s instant jump (larger = gradual)
-    correctionRate: 0.1,         // 10% gradual correction per sync cycle
-    maxOffsetThreshold: 5000     // Force instant correction if >5s off (emergency)
-});
-
-await timeSync.sync({ coherenceValidation: true });
-timeSync.startAutoSync(300000);
-```
-
----
-
-## 📖 Usage Examples
-
-### 1. Basic Time Sync
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Sync with default NTP servers: pool.ntp.org, time.nist.gov, time.cloudflare.com
-await timeSync.sync();
-
-// Get precise time
-console.log('Precise time:', timeSync.now());
-console.log('ISO timestamp:', timeSync.timestamp());
-console.log('System offset:', timeSync.offset(), 'ms');
-```
-
-### 2. Sync Configuration
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Custom configuration with server validation
-await timeSync.sync({
-    servers: ['time.cloudflare.com', 'time.google.com'],  // Custom NTP servers
-    timeout: 5000,                                        // 5s timeout per server
-    retries: 3,                                           // Retry 3 times if failed
-    coherenceValidation: true  // Tests multiple servers for consistency (detects bad servers)
-});
-
-console.log('Synced with validated servers!');
-```
-
-### 3. Auto-Sync & Production Setup
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Basic auto-sync setup
-await timeSync.sync({ 
-    coherenceValidation: true  // Validate server consistency (recommended)
-});
-timeSync.startAutoSync(300000); // Re-sync every 5 minutes
-
-// Production setup with smooth correction
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 500,      // Max 0.5s instant jump (prevents app disruption)
-    correctionRate: 0.1,         // 10% gradual correction per sync
-    maxOffsetThreshold: 3000     // Force instant correction if >3s off
-});
-
-await timeSync.sync({ coherenceValidation: true });
-timeSync.startAutoSync(300000);
-
-console.log('Production time sync active!');
-// Your computer's clock drifts ~1-2 seconds per day without auto-sync
-```
-
-### 4. Smooth Time Correction (Avoid Time Jumps)
-```javascript
-const timeSync = require('precise-time-ntp');
-
-// Configure smooth correction to prevent breaking running timers/intervals
-timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,     // Max 1s instant jump (larger jumps are gradual)
-    correctionRate: 0.1,         // 10% gradual correction per sync cycle
-    maxOffsetThreshold: 5000     // Force instant correction if >5s off (emergency)
-});
-
-await timeSync.sync({ 
-    coherenceValidation: true    // Validate server consistency for accuracy
-});
-timeSync.startAutoSync(300000);
-
-// Monitor when correction completes
-timeSync.on('correctionComplete', (data) => {
-    console.log(`🎯 Correction completed: ${data.finalOffset}ms`);
-    if (data.converged) console.log('Perfect precision achieved');
-});
-```
-
-### 5. Live HTML Clock
-```javascript
-// Node.js server
-const timeSync = require('precise-time-ntp');
-
-await timeSync.sync({ 
-    coherenceValidation: true    // Ensure accurate time for public display
-});
-timeSync.startWebSocketServer(8080);  // Broadcast time to web clients
-timeSync.startAutoSync(300000);       // Keep time accurate automatically
-```
-
-```html
-<!-- HTML file -->
-<h1 id="clock">Loading...</h1>
-<script>
-const ws = new WebSocket('ws://localhost:8080');
-ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    document.getElementById('clock').textContent = 
-        new Date(data.data.timestamp).toLocaleTimeString();
-};
-setInterval(() => ws.send('{"type":"getTime"}'), 1000);
-</script>
-```
-
-### 6. Events & Error Handling
-```javascript
-const timeSync = require('precise-time-ntp');
-
-await timeSync.sync({ 
-    coherenceValidation: true    // Enable server validation events
-});
-
-// Basic sync events
-timeSync.on('sync', (data) => {
-    console.log(`✅ Synced with ${data.server} (offset: ${data.offset}ms)`);
-});
-
-timeSync.on('error', (error) => {
-    console.log(`❌ Sync failed: ${error.message}`);
-});
-```
-
----
-
-## 📊 API Reference
-
-| Method | Purpose | Example |
-|--------|---------|---------|
-| `sync()` | Sync with NTP servers | `await timeSync.sync()` |
-| `now()` | Get precise timestamp (ms) | `timeSync.now()` |
-| `timestamp()` | Get ISO string | `timeSync.timestamp()` |
-| `offset()` | Get system drift (ms) | `timeSync.offset()` |
-| `stats()` | Get detailed sync info | `timeSync.stats()` |
-| `startAutoSync(ms)` | Auto-sync every X ms | `timeSync.startAutoSync(300000)` |
-| `stopAutoSync()` | Stop auto-sync | `timeSync.stopAutoSync()` |
-| `setSmoothCorrection()` | Configure gradual time correction | `timeSync.setSmoothCorrection(true, options)` |
-| `startWebSocketServer(port)` | Enable HTML integration | `timeSync.startWebSocketServer(8080)` |
-
----
-
-## 🔍 System Monitoring & Diagnostics
-
-For advanced monitoring and diagnostics in production environments:
-
-### Get Detailed Stats
-Monitor synchronization status and performance:
+## Quick start
 
 ```javascript
 const timeSync = require('precise-time-ntp');
 
 await timeSync.sync();
 
-// Get detailed synchronization information
-const stats = timeSync.stats();
-console.log(stats);
+timeSync.now()        // Date object — precise NTP time
+timeSync.timestamp()  // "2026-04-25T15:30:45.123Z"
+timeSync.offset()     // how far off your system clock is, in ms
+```
 
-/* Output:
-{
-  synchronized: true,              // Sync status
-  lastSync: 2025-07-06T19:18:27.130Z,  // Last sync time
-  offset: -10,                     // Real system offset (ms)
-  rtt: 47,                         // Last network round-trip time (ms)
-  correctedOffset: -10,            // Currently applied offset (ms)
-  targetOffset: -10,               // Target for smooth correction (ms)
-  correctionInProgress: false,     // Whether correction is active
-  uptime: 5432,                    // Time since sync (ms)
-  config: {                        // Current configuration
+---
+
+## Configuration
+
+All options can be set at construction time or overridden per `sync()` call.
+
+```javascript
+const { TimeSync } = require('precise-time-ntp');
+
+const t = new TimeSync({
+    // NTP servers to query (up to 3 are used for coherence validation)
+    servers: ['time.cloudflare.com', 'time.google.com', 'pool.ntp.org'],
+
+    timeout: 5000,             // ms before a server is considered unreachable
+    coherenceValidation: true, // compare servers and use median offset
+
+    // Auto-sync on startup
+    autoSync: true,
+    autoSyncInterval: 300000,  // re-sync every 5 minutes
+
+    // Smooth correction (see section below)
     smoothCorrection: true,
     maxCorrectionJump: 1000,
     correctionRate: 0.1,
-    maxOffsetThreshold: 5000
-  }
+    maxOffsetThreshold: 5000,
+
+    locale: 'fr-FR',           // used by format() — defaults to system locale
+});
+```
+
+Or pass options directly to `sync()` for a one-off override:
+
+```javascript
+await timeSync.sync({
+    servers: ['time.cloudflare.com'],
+    timeout: 3000,
+    coherenceValidation: false,
+});
+```
+
+The default global instance uses `pool.ntp.org`, `time.google.com`, and `time.cloudflare.com`.
+
+---
+
+## Keep it synced automatically
+
+```javascript
+await timeSync.sync();
+timeSync.startAutoSync(300000); // re-sync every 5 minutes
+```
+
+Or enable it at construction: `new TimeSync({ autoSync: true, autoSyncInterval: 300000 })`.
+
+`coherenceValidation` queries multiple servers and uses the median offset — useful if one server is having a bad day. Emits a `coherenceWarning` event if servers disagree by more than 100ms.
+
+---
+
+## Smooth correction
+
+By default, if your clock is off by 500ms and you re-sync, it jumps 500ms instantly. That can break timers and logs. Smooth correction applies the fix gradually:
+
+```javascript
+timeSync.setSmoothCorrection(true, {
+    maxCorrectionJump: 1000,  // apply instantly if diff is under 1s
+    correctionRate: 0.1,      // otherwise, fix 10% per sync cycle
+    maxOffsetThreshold: 5000  // always apply instantly if diff > 5s
+});
+
+// If you can't wait for the gradual correction to finish:
+timeSync.forceCorrection();
+```
+
+---
+
+## Utilities
+
+```javascript
+// Format a date
+timeSync.format(null, 'iso')              // "2026-04-25T15:30:45.123Z"
+timeSync.format(null, 'locale')           // system locale, e.g. "25/04/2026, 17:30:45"
+timeSync.format(null, 'locale', 'en-US') // "4/25/2026, 5:30:45 PM"
+timeSync.format(null, 'utc')             // "Sat, 25 Apr 2026 15:30:45 GMT"
+timeSync.format(null, 'date')            // date only
+timeSync.format(null, 'time')            // time only
+timeSync.format(null, 'timestamp')       // Unix timestamp as string
+
+// Difference between two dates (ms)
+timeSync.diff('2026-01-01', timeSync.now()) // e.g. 9849600000
+
+// console.log with NTP timestamp prefix
+timeSync.log('order processed')
+// → [2026-04-25T15:30:45.123Z] order processed
+
+// Check sync status without throwing
+if (timeSync.isSynchronized()) {
+    console.log(timeSync.now());
 }
-*/
-
-// Access specific values
-console.log('System offset:', stats.offset, 'ms');
-console.log('Is synchronized:', stats.synchronized);
-console.log('Smooth correction active:', stats.correctionInProgress);
 ```
 
-### Server Monitoring
-Monitor server coherence and detect inconsistencies:
+---
+
+## Live HTML clock via WebSocket
 
 ```javascript
-// Monitor for server issues
+// server.js
+await timeSync.sync();
+timeSync.startWebSocketServer(8080);
+timeSync.startAutoSync(300000);
+```
+
+```html
+<h1 id="clock"></h1>
+<script>
+const ws = new WebSocket('ws://localhost:8080');
+ws.onmessage = (e) => {
+    const { data } = JSON.parse(e.data);
+    document.getElementById('clock').textContent =
+        new Date(data.timestamp).toLocaleTimeString();
+};
+</script>
+```
+
+---
+
+## Events
+
+```javascript
+timeSync.on('sync', (data) => {
+    // data.server, data.offset (ms), data.rtt (ms)
+    console.log(`synced — offset: ${data.offset}ms, rtt: ${data.rtt}ms`);
+});
+
+timeSync.on('error', (err) => {
+    // err.message, err.server
+    console.error(`sync failed on ${err.server}: ${err.message}`);
+});
+
 timeSync.on('coherenceWarning', (data) => {
-    console.log(`⚠️ Server variance detected: ${data.variance}ms`);
-    console.log('Servers tested:', data.servers);
+    // servers disagree by more than 100ms
+    console.warn(`server variance: ${data.variance}ms`, data.servers);
+});
+
+timeSync.on('driftWarning', (data) => {
+    // now() called more than 1 hour after last sync
+    console.warn(`${(data.elapsed / 3600000).toFixed(1)}h since last sync`);
+});
+
+timeSync.on('correctionComplete', (data) => {
+    // data.finalOffset, data.converged, data.forced, data.timeout
+    console.log(`correction done — final offset: ${data.finalOffset}ms`);
 });
 ```
 
-### System Health Monitoring
-Monitor system clock drift and correction progress:
+---
+
+## Stats
 
 ```javascript
-// Monitor system clock drift
-timeSync.on('driftWarning', (data) => {
-    const hours = (data.elapsed / 3600000).toFixed(1);
-    console.log(`⏰ System running ${hours}h without sync`);
-});
+const s = timeSync.stats();
 
-// Monitor smooth correction completion
-timeSync.on('correctionComplete', (data) => {
-    console.log(`🎯 Correction completed: ${data.finalOffset}ms`);
-    if (data.converged) console.log('Perfect convergence achieved');
-});
+s.synchronized         // true/false
+s.offset               // current system clock error (ms)
+s.rtt                  // last network round-trip time (ms)
+s.correctedOffset      // offset currently being applied
+s.correctionInProgress // true while smooth correction is running
+s.lastSync             // Date of last successful sync
+s.uptime               // ms since last sync
 ```
 
 ---
 
-## 📄 Complete Documentation
+## API
 
-For detailed guides, advanced configuration, and troubleshooting:
+| Method | Description |
+|--------|-------------|
+| `sync(options?)` | Sync with NTP servers |
+| `now()` | Current precise time as a `Date` |
+| `timestamp()` | Current time as ISO string |
+| `offset()` | System clock error in ms |
+| `isSynchronized()` | Returns `true` if synced (no throw) |
+| `stats()` | Full sync diagnostics |
+| `startAutoSync(ms)` | Re-sync on an interval |
+| `stopAutoSync()` | Stop auto-sync |
+| `setSmoothCorrection(bool, options?)` | Configure gradual correction |
+| `forceCorrection()` | Apply pending correction immediately |
+| `startWebSocketServer(port)` | Broadcast time over WebSocket |
+| `stopWebSocketServer()` | Stop WebSocket server |
+| `format(date?, format?, locale?)` | Format a date (`iso`, `locale`, `utc`, `date`, `time`, `timestamp`) |
+| `diff(date1, date2?)` | Difference between two dates in ms |
+| `log(message)` | `console.log` with NTP timestamp prefix |
 
-**👉 [View Full Documentation](docs/)**
+Full option reference: [docs/api-reference.md](docs/api-reference.md)
 
-- [Quick Start Guide](docs/quick-start.md) - Get started in 5 minutes
-- [Complete API Reference](docs/api-reference.md) - All methods and options  
-- [WebSocket Integration](docs/websocket-guide.md) - Real-time HTML clocks
+---
 
-**📁 Examples:**
-- `examples/basic.js` - Simple time sync with stats
-- `examples/auto-sync.js` - Automatic periodic synchronization  
-- `examples/monitoring.js` - Detailed synchronization diagnostics
-- [Smooth Correction Guide](docs/smooth-correction.md) - Avoid time jumps
-- [FAQ & Troubleshooting](docs/faq.md) - Common questions
+## Try it
 
-## Test It Now
 ```bash
-npm run basic        # Simple sync test
-npm run auto-sync    # Auto-sync test  
-npm run websocket    # WebSocket + HTML demo
+npm run basic        # simple sync
+npm run auto-sync    # auto-sync loop
+npm run websocket    # WebSocket + HTML clock
 ```
-
-## 📄 License
-
-MIT License - use anywhere, commercially or personally.
 
 ---
 
-<div align="center">
+## License
 
-**⏰ precise-time-ntp - Because timing matters**
-
-[📖 Documentation](docs/) • [🐛 Report Bug](https://github.com/TheHuman00/precise-time-ntp/issues) • [💡 Request Feature](https://github.com/TheHuman00/precise-time-ntp/issues)
-
-</div>
+MIT
