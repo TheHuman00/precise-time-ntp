@@ -4,8 +4,8 @@
 
 [![npm version](https://img.shields.io/npm/v/precise-time-ntp?style=for-the-badge&color=brightgreen&label=npm)](https://www.npmjs.com/package/precise-time-ntp)
 [![Node.js](https://img.shields.io/badge/Node.js-≥14.0.0-green?style=for-the-badge&logo=node.js)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-precise--time--ntp-black?style=for-the-badge&logo=github)](https://github.com/TheHuman00/precise-time-ntp)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/12836/baseline)](https://www.bestpractices.dev/projects/12836)
 
 </div>
 

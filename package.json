@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node test.js",
+    "lint": "eslint index.js test.js",
     "start": "node examples/websocket.js",
     "basic": "node examples/basic.js",
     "auto-sync": "node examples/auto-sync.js",
@@ -49,5 +50,10 @@
   },
   "dependencies": {
     "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0"
   }
 }

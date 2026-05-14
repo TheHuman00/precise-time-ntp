@@ -14,14 +14,10 @@ Please delete options that are not relevant.
 - [ ] Code refactoring
 
 ## How Has This Been Tested?
-Please describe the tests that you ran to verify your changes.
 
 - [ ] Unit tests pass
 - [ ] Manual testing performed
 - [ ] Integration tests added/updated
-
-## Screenshots (if applicable)
-Add screenshots to help explain your changes.
 
 ## Additional Notes
 Add any other context about the pull request here.

@@ -210,7 +210,7 @@ class TimeSync extends EventEmitter {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        try { client.close(); } catch (_) {}
+        try { client.close(); } catch { /* socket may already be closed */ }
         err ? reject(err) : resolve(result);
       };
 
@@ -379,7 +379,7 @@ class TimeSync extends EventEmitter {
         try {
           const data = JSON.parse(message);
           this.handleWebSocketMessage(ws, data);
-        } catch (error) {
+        } catch {
           ws.send(JSON.stringify({
             type: 'error',
             message: 'Invalid JSON format'

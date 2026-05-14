@@ -37,6 +37,10 @@ We welcome feature suggestions! Please:
 5. **Ensure tests pass** by running `npm test`
 6. **Create a pull request** with a clear title and description
 
+### License
+
+By submitting a pull request, you certify that you have the right to submit the contribution and that it may be distributed under the terms of the [MIT License](LICENSE) (inbound = outbound).
+
 ## Development Setup
 
 ```bash
@@ -100,3 +104,19 @@ When adding new features:
 2. Add/update API documentation in `docs/api-reference.md`
 3. Create examples in the `examples/` directory
 4. Update JSDoc comments in the code
+
+## Dependency Management
+
+This project follows a minimal-dependency philosophy.
+
+**Policy:**
+- New runtime dependencies require explicit justification in the PR (security impact, maintenance status, license compatibility)
+- Dependencies are pinned via `package-lock.json` and must be committed with every change
+- Use `npm ci` (not `npm install`) in CI/CD to guarantee reproducible installs
+- Dependencies are tracked via `npm audit` — any new high/critical vulnerability must be resolved before merging
+
+**Adding a dependency:**
+1. Verify the license is MIT-compatible
+2. Check the package's security history on [npm](https://www.npmjs.com) and [Snyk](https://snyk.io)
+3. Justify the addition in your PR description
+4. Run `npm audit` and confirm no new vulnerabilities are introduced

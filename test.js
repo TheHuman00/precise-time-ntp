@@ -131,7 +131,7 @@ async function runTests() {
                 timeSync.stopWebSocketServer();
                 test('WebSocket server stops', true);
             }, 100);
-        } catch (error) {
+        } catch {
             test('WebSocket server (optional)', true); // Skip if port is busy
         }
 

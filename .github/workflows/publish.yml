@@ -17,13 +17,14 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,12 +43,23 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
       
-      - run: |
-          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
-            npm version ${{ github.event.inputs.custom_version }}
+      - name: Validate and apply version
+        run: |
+          if [ -n "$CUSTOM_VERSION" ]; then
+            if ! echo "$CUSTOM_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$'; then
+              echo "Error: custom_version is not a valid semver string"
+              exit 1
+            fi
+            npm version "$CUSTOM_VERSION"
           else
-            npm version ${{ github.event.inputs.version_type }}
+            case "$VERSION_TYPE" in
+              patch|minor|major) npm version "$VERSION_TYPE" ;;
+              *) echo "Error: invalid version_type '$VERSION_TYPE'"; exit 1 ;;
+            esac
           fi
+        env:
+          CUSTOM_VERSION: ${{ github.event.inputs.custom_version }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
       
       # Publish to npm
       - run: npm publish

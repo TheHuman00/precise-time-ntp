@@ -2,55 +2,64 @@
 
 ## Supported Versions
 
-We actively support the following versions of precise-time-ntp with security updates:
+Only the latest major version receives security updates.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version | Supported |
+|---------|-----------|
+| 2.x (latest) | ✅ |
+| 1.x | ❌ |
+
+**Support duration:** Each major version is supported until the next major version has been stable for 30 days, at which point it reaches end-of-life and no longer receives security updates. Users are encouraged to upgrade promptly.
 
 ## Reporting a Vulnerability
 
-We take security vulnerabilities seriously. If you discover a security vulnerability in precise-time-ntp, please report it responsibly.
+If you discover a security vulnerability, please report it responsibly — **do not open a public GitHub issue**.
 
-### How to Report
+**Options:**
+1. Use [GitHub private security advisories](https://github.com/TheHuman00/precise-time-ntp/security/advisories/new)
+2. Email: precise-time-ntp.broiling732@aleeas.com
 
-1. **DO NOT** create a public GitHub issue for security vulnerabilities
-2. Email us directly at: [precise-time-ntp.broiling732@aleeas.com]
-3. Include as much information as possible:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if available)
+Include: description, steps to reproduce, potential impact, and suggested fix if available.
 
-### What to Expect
+**Response timeline:**
+- Acknowledgment within **48 hours**
+- Initial assessment within **5 business days**
+- Resolution of critical vulnerabilities within **30 days**
 
-- **Acknowledgment**: We will acknowledge receipt of your report within 48 hours
-- **Initial Assessment**: We will provide an initial assessment within 5 business days
-- **Updates**: We will keep you informed of our progress
-- **Resolution**: We aim to resolve critical vulnerabilities within 30 days
+We follow responsible disclosure: once a fix is released, the vulnerability will be publicly disclosed via a GitHub Security Advisory.
 
-### Responsible Disclosure
+## Secrets and Credentials Policy
 
-We follow responsible disclosure practices:
+- All secrets (npm tokens, GitHub tokens) are stored exclusively as GitHub Actions secrets — never in source code or configuration files
+- The `NPM_TOKEN` is scoped to publish-only access
+- Secrets are rotated immediately upon suspected compromise or maintainer offboarding
+- `.env` files and credential files are listed in `.gitignore` and must never be committed
 
-1. We will work with you to understand and resolve the issue
-2. We will not take legal action against researchers who:
-   - Follow this disclosure process
-   - Act in good faith
-   - Do not access or modify user data
-   - Do not perform actions that could harm our users
+## Dependency Vulnerability Policy (SCA)
 
-### Security Best Practices
+- **Critical / High** vulnerabilities in dependencies must be resolved before the next release
+- **Medium** vulnerabilities must be assessed within 30 days and resolved or documented as non-exploitable
+- `npm audit` runs automatically on every CI run and blocks merges on high/critical findings
+- Vulnerabilities assessed as non-exploitable in the context of this library are documented in GitHub Security Advisories with a VEX-style justification
 
-When using precise-time-ntp:
+## Static Analysis Policy (SAST)
 
-- Always use the latest version
-- Validate all inputs in your application
-- Use secure transport (HTTPS/WSS) for WebSocket connections
-- Monitor for unusual NTP traffic patterns
-- Implement rate limiting for time synchronization requests
+- CodeQL runs automatically on every push and pull request via GitHub Actions
+- Any CodeQL finding of severity **high or critical** must be resolved or suppressed with documented justification before the change is merged
+- Medium findings are reviewed within 30 days
+
+## Verifying Releases
+
+**Integrity:** npm stores a SHA-512 hash for every published version. `npm ci` verifies these automatically via `package-lock.json`. To inspect manually:
+```bash
+npm view precise-time-ntp@2.1.0 dist.integrity
+```
+
+**Identity:** All releases are published by `@TheHuman00` via the public GitHub Actions workflow (`publish.yml`). Verify the publisher:
+```bash
+npm owner ls precise-time-ntp
+```
 
 ## Attribution
 
-We will acknowledge security researchers who responsibly disclose vulnerabilities (unless they prefer to remain anonymous).
+Security researchers who responsibly disclose vulnerabilities will be acknowledged (unless they prefer to remain anonymous).
