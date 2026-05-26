@@ -8,7 +8,7 @@
 
 </div>
 
-Sync your Node.js app with NTP servers and get the real time — not whatever your system clock thinks it is.
+Sync your Node.js app with NTP servers and get the real time.
 
 Your system clock drifts. Servers disagree. `Date.now()` lies. This library fixes that with a proper 4-timestamp NTP implementation that compensates for network latency, validates server consistency, and corrects drift gradually without breaking your running timers.
 
