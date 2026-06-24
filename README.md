@@ -29,7 +29,7 @@ const timeSync = require('precise-time-ntp');
 
 await timeSync.sync();
 
-timeSync.now()        // Date object — precise NTP time
+timeSync.now()        // Date object - precise NTP time
 timeSync.timestamp()  // "2026-04-25T15:30:45.123Z"
 timeSync.offset()     // how far off your system clock is, in ms
 ```
@@ -57,11 +57,11 @@ const t = new TimeSync({
 
     // Smooth correction (see section below)
     smoothCorrection: true,
-    maxCorrectionJump: 1000,  // ms — apply instantly if diff is under this
+    maxCorrectionJump: 1000,  // ms, apply instantly if diff is under this
     correctionRate: 0.1,      // fraction per sync cycle (0.1 = 10%)
-    maxOffsetThreshold: 5000, // ms — always apply instantly if diff exceeds this
+    maxOffsetThreshold: 5000, // ms, always apply instantly if diff exceeds this
 
-    locale: 'fr-FR',           // used by format() — defaults to system locale
+    locale: 'fr-FR',           // used by format(), defaults to system locale
 });
 ```
 
@@ -83,7 +83,7 @@ The default global instance uses `pool.ntp.org`, `time.google.com`, and `time.cl
 
 ```javascript
 await timeSync.sync();
-timeSync.startAutoSync(300000); // ms — re-sync every 5 minutes
+timeSync.startAutoSync(300000); // ms, re-sync every 5 minutes
 ```
 
 Or enable it at construction: `new TimeSync({ autoSync: true, autoSyncInterval: 300000 })`.
@@ -98,9 +98,9 @@ By default, if your clock is off by 500ms and you re-sync, it jumps 500ms instan
 
 ```javascript
 timeSync.setSmoothCorrection(true, {
-    maxCorrectionJump: 1000,  // ms — apply instantly if diff is under 1s
+    maxCorrectionJump: 1000,  // ms, apply instantly if diff is under 1s
     correctionRate: 0.1,      // fraction per sync cycle (0.1 = 10%)
-    maxOffsetThreshold: 5000  // ms — always apply instantly if diff > 5s
+    maxOffsetThreshold: 5000  // ms, always apply instantly if diff > 5s
 });
 
 // If you can't wait for the gradual correction to finish:
@@ -200,9 +200,9 @@ timeSync.on('correctionComplete', (data) => {
 const s = timeSync.stats();
 
 s.synchronized         // true/false
-s.offset               // ms — current system clock error
-s.rtt                  // ms — last network round-trip time
-s.correctedOffset      // ms — offset currently being applied
+s.offset               // ms, current system clock error
+s.rtt                  // ms, last network round-trip time
+s.correctedOffset      // ms, offset currently being applied
 s.correctionInProgress // true while smooth correction is running
 s.lastSync             // Date of last successful sync
 s.uptime               // ms since last sync
